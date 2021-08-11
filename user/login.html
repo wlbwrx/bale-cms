@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>芭乐仓库</title>
+    <link rel="shortcut icon" href="../img/favicon.ico" type="image/x-icon" />
+    <link rel="stylesheet" href="../dist/super/css/font-awesome.min.css">
+    <link rel="stylesheet" href="../dist/super/superBlue.css" id="themeCss">
+    <link rel="stylesheet" href="../css/common.css">
+    <link rel="stylesheet" href="../css/daterangepicker.css">
+    <script src="../dist/easyui/jquery.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../dist/easyui/jquery.easyui.min.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../dist/easyui/locale/easyui-lang-zh_CN.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/xlsx.full.min.js"></script>
+    <script src="../dist/super/super.js" type="text/javascript" charset="utf-8"></script>
+    <script src="../js/JsBarcode.all.min.js"></script>
+    <script src="../js/jQuery.print.min.js"></script>
+    <script src="../js/moment.min.js"></script>
+    <script src="../js/jquery.daterangepicker.js"></script>
+    <script src="../js/common.js"></script>
+    <style>
+        html, body {width: 100%;height: 100%;}
+        .login-bg {height: 100%;background-image: url("../img/login_bg1.png");background-size: cover;}
+        .login {height: 100%;background-color: rgba(107, 104, 122, 0.6);display: flex;}
+        .login-block {margin: auto;background-color: #ffffff;width: 700px;height: 500px;display: flex;}
+        .login-left {width: 230px;background-image: url("../img/login_left.png");background-size: cover;}
+        .login-left span {display: block;text-align: center;margin-top: 80px;color: #ffffff;font-size: 20px;}
+        .login-right {width: 470px;}
+        .login-box {padding: 55px;}
+        .login-right span {display: block;font-size: 20px;color: #666666;margin-top: 22px;}
+        .login-form {margin-top: 80px;}
+        .login-input {font-size: 14px;margin-bottom: 22px;}
+        .login-input input {height: 40px;padding: 0 15px;width: 160px;border-top: 0;border-right: 0;border-left: 0;border-color: #efefef;border-width: thin;transition: all .3s ease;}
+        .login-input input:focus {border-color: #409EFF;}
+        .label-left {vertical-align: middle;width: 60px;display: inline-block;}
+        .search-btn {margin-top: 60px;}
+        .search {cursor: pointer;color: #ffffff;background-color: #4176FF;height: 35px;line-height: 35px;width: 110px;text-align: center;border-radius: 50px;font-size: 14px;transition: all .3s ease;}
+        .search:hover {opacity: 0.8;}
+    </style>
+</head>
+
+<body>
+    <div class="login-bg">
+        <div class="login">
+            <div class="login-block">
+                <div class="login-left">
+                    <span>芭乐仓库系统</span>
+                </div>
+                <div class="login-right">
+                    <div class="login-box">
+                        <span>登陆</span>
+                        <div id="loginForm" class="login-form">
+                            <div class="login-input">
+                                <label class="label-left">账 号：</label>
+                                <input type="text" name="username" placeholder="请输入仓库账号" />
+                            </div>
+                            <div class="login-input">
+                                <label class="label-left">密 码：</label>
+                                <input type="password" name="password" placeholder="请输入仓库密码" />
+                            </div>
+                        </div>
+                        <div class="search-btn">
+                            <div class="search" onclick="login.methods.login()">登 陆</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="text/javascript">
+        var login = {
+            data: {
+
+            },
+            methods: {
+                // 登录
+                login: function () {
+                    var parame = getParams('#loginForm')
+					if (!parame.username) {
+						message('error', '登录账号不能为空')
+						return false
+                    }
+                    if (!parame.password) {
+						message('error', '登录密码不能为空')
+						return false
+                    }
+					requestServerLogin('/uaa/login', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '登录成功')
+                            localStorage.setItem('token', response.datas.token)
+                            localStorage.setItem('userName', response.datas.userName)
+                            localStorage.setItem('authorities', JSON.stringify(response.datas.authorities))
+                            localStorage.setItem('roles', JSON.stringify(response.datas.roles))
+                            window.location.href = '../index.html'
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                }
+            },
+            events: {
+
+            },
+            init: function () {
+
+            }
+        }
+
+        // 初始化
+        $(function () {
+
+        })
+    </script>
+</body>
+
+</html>
