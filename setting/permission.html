@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>权限</title>
+</head>
+
+<body>
+	<div class="super-theme-example permission-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="PERMISSION_ADD" class="btn success hide" onclick="permission.methods.addPermissionDialog()">添加权限</button>
+			</div>
+		</div>
+	</div>
+
+	<!--权限列表-->
+	<div class="panel-block">
+		<table id="permissionList" style="width: 100%"></table>
+	</div>
+
+	<!--添加权限弹框-->
+	<div id="addPermissionDialog" class="easyui-dialog" title="添加权限" style="width: 400px;height: 490px" data-options="buttons: '#addPermissionBtn',modal: true,closed: true">
+		<div class="form-dialog" id="addPermissionForm">
+            <!--父级ID-->
+			<input type="hidden" name="parentId">
+			<div class="form-item">
+				<label class="label-top">名称 *：</label>
+				<input type="text" name="name" class="form-input">
+			</div>
+			<div class="form-item">
+                <label class="label-top">类型 *：</label>
+                <input id="addPermissionType" name="type" class="easyui-combobox" prompt="类型">
+			</div>
+            <div class="form-item">
+				<label class="label-top">排序 *：</label>
+				<input type="number" name="orderNum" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">icon：</label>
+				<input type="text" name="icon" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">链接：</label>
+				<input type="text" name="url" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">值：</label>
+				<input type="text" name="value" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="addPermissionBtn">
+		<button class="btn large" onclick="$('#addPermissionDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="permission.methods.addPermission()">添加</button>
+    </div>
+    
+    <!--编辑权限弹框-->
+	<div id="editPermissionDialog" class="easyui-dialog" title="编辑权限" style="width: 400px;height: 490px" data-options="buttons: '#editPermissionBtn',modal: true,closed: true">
+        <div class="form-dialog" id="editPermissionForm">
+            <!--父级ID-->
+            <input type="hidden" name="parentId">
+            <!--权限ID-->
+			<input type="hidden" name="id">
+            <div class="form-item">
+                <label class="label-top">名称 *：</label>
+                <input type="text" name="name" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="label-top">类型 *：</label>
+                <input id="editPermissionType" name="type" class="easyui-combobox" prompt="类型">
+            </div>
+            <div class="form-item">
+                <label class="label-top">排序 *：</label>
+                <input type="number" name="orderNum" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">icon：</label>
+				<input type="text" name="icon" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">链接：</label>
+				<input type="text" name="url" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">值：</label>
+				<input type="text" name="value" class="form-input">
+			</div>
+        </div>
+    </div>
+    <div id="editPermissionBtn">
+		<button class="btn large" onclick="$('#editPermissionDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="permission.methods.editPermission()">修改</button>
+    </div>
+
+	<script type="text/javascript">
+		var permission = {
+			data: {
+				permissionList: [], // 权限列表
+				openTreeList: [] // 当前展开的树
+			},
+			methods: {
+                // 初始化添加权限类型
+                initAddType: function (type) {
+                    // 类型
+                    var typeList = []
+                    if (type == 0) {
+                        typeList = [{id: 1,text: '目录'}, {id: 2,text: '菜单'}, {id: 3,text: '按钮'}]
+                    } else if (type == 1) {
+                        typeList = [{id: 2,text: '菜单'}, {id: 3,text: '按钮'}]
+                    } else if (type == 2) {
+                        typeList = [{id: 3,text: '按钮'}]
+                    }
+					$('#addPermissionForm #addPermissionType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: typeList,
+						onSelect: function (rec) {
+
+						}
+					})
+                },
+
+                // 初始化编辑权限类型
+                initEditType: function (type) {
+                    // 类型
+                    var typeList = []
+                    if (type == 1) {
+                        typeList = [{id: 1,text: '目录'}, {id: 2,text: '菜单'}, {id: 3,text: '按钮'}]
+                    } else if (type == 2) {
+                        typeList = [{id: 2,text: '菜单'}, {id: 3,text: '按钮'}]
+                    } else if (type == 3) {
+                        typeList = [{id: 3,text: '按钮'}]
+                    }
+					$('#editPermissionForm #editPermissionType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: typeList,
+						onSelect: function (rec) {
+
+						}
+					})
+                },
+
+				// 获取权限列表
+				getPermissionList: function () {
+					$('#permissionList').height($(window).height() - $('.permission-head').height() - 180)
+					$('#permissionList').treegrid({
+						method: 'GET',
+						url: host() + '/uaa/authority',
+						idField: 'id',
+                        treeField: 'name',
+                        parentField: 'parentId',
+                        animate: false,
+                        lines: false,
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+
+                        },
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+                            } else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+                            // 转换成esayui树形表格的格式
+                            var json = JSON.stringify(data.datas).replace(/authorities/g, 'children')
+                            json = JSON.parse(json)
+                            permission.methods.treeGridShow(json) // 默认不展开
+							permission.data.permissionList = json
+							$('#permissionList').datagrid('scrollTo', 0)
+							return {
+								rows: json
+							}
+						},
+						pagination: false, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'name',
+								title: '名称',
+								width: 100
+							}, {
+								field: 'type',
+								title: '类型',
+                                width: 100,
+                                formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div>目录</div>`
+									} else if (value == 2) {
+										html = `<div>菜单</div>`
+									} else if (value == 3) {
+                                        html = `<div>按钮</div>`
+                                    }
+									return html
+								}
+							}, {
+								field: 'value',
+								title: '值',
+								width: 100
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 100,
+								formatter: function (value, row, index) {
+                                    var html = `<div class="table-btn-group">`
+                                    if (row.type == 3) {
+										html += `<span style="width: 50px;display: inline-block;"></span>
+												<button data-value="PERMISSION_EDIT" class="btn info hide" onclick="permission.methods.editPermissionDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+												<button data-value="PERMISSION_DELETE" class="btn error hide" onclick="permission.methods.deletePermission(${row.id})">删除</button>`
+                                    } else {
+                                        html += `<button data-value="PERMISSION_ADD" class="btn success hide" onclick="permission.methods.addPermissionDialog(${JSON.stringify(row).replace(/"/g,"'")})">添加</button>
+												<button data-value="PERMISSION_EDIT" class="btn info hide" onclick="permission.methods.editPermissionDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+												<button data-value="PERMISSION_DELETE" class="btn error hide" onclick="permission.methods.deletePermission(${row.id})">删除</button>`
+									}
+									html += `</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						},
+						onExpand: function (row) {
+							permission.data.openTreeList.push(row.id)
+						},
+						onCollapse: function (row) {
+							var list = permission.data.openTreeList
+							for (const i in list) {
+								if (row.id == list[i]) {
+									list.splice(i, 1)
+								}
+							}
+							permission.data.openTreeList = list
+						}
+					})
+                },
+                
+                // 默认不展开
+                treeGridShow: function (data) {
+                    $(data).each(function (index, item) {
+                        if (!item.children) {
+                            item.state = 'open'
+                        } else {
+                            item.state = 'closed'
+                            permission.methods.treeGridShow(item.children)
+                        }
+                    })
+                },
+
+                // 添加权限弹框
+                addPermissionDialog: function (row) {
+                    $('#addPermissionDialog').dialog('open')
+                    if (row) {
+                        // 多级添加
+                        $('#addPermissionForm').find("input[name='parentId']").val(row.id)
+                        permission.methods.initAddType(row.type) // 初始化添加权限类型
+						$('#permissionList').treegrid('expand', row.id) // 展开当前操作的节点
+                    } else {
+                        // 一级添加
+                        $('#addPermissionForm').find("input[name='parentId']").val(0)
+                        permission.methods.initAddType(0) // 初始化添加权限类型
+                    }
+                },
+
+				// 添加权限
+				addPermission: function () {
+					var parame = getParams('#addPermissionForm')
+					if (!parame.name) {
+						message('error', '权限名称不能为空')
+						return false
+                    }
+                    if (!parame.type) {
+						message('error', '权限类型不能为空')
+						return false
+                    }
+                    if (!parame.orderNum) {
+						message('error', '权限排序不能为空')
+						return false
+					}
+					showLoading()
+					requestServer('/uaa/authority', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '添加成功')
+                            $('#addPermissionForm').form('clear')
+							$('#addPermissionDialog').dialog('close')
+							$('#permissionList').treegrid("reload"); // 获取权限列表
+							permission.methods.openTree() // 展开已展开的树
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                },
+                
+                // 编辑权限弹框
+                editPermissionDialog: function (row) {
+                    $('#editPermissionDialog').dialog('open')
+                    permission.methods.initEditType(row.type) // 初始化编辑权限类型
+                    $('#editPermissionForm').find("input[name='parentId']").val(row.parentId)
+                    $('#editPermissionForm').find("input[name='id']").val(row.id)
+                    $('#editPermissionForm').find("input[name='name']").val(row.name)
+                    $('#editPermissionForm').find("#editPermissionType").combobox('setValue', row.type)
+                    $('#editPermissionForm').find("input[name='orderNum']").val(row.orderNum)
+                    $('#editPermissionForm').find("input[name='icon']").val(row.icon)
+                    $('#editPermissionForm').find("input[name='url']").val(row.url)
+					$('#editPermissionForm').find("input[name='value']").val(row.value)
+                },
+
+                // 编辑权限
+                editPermission: function () {
+                    var parame = getParams('#editPermissionForm')
+					if (!parame.name) {
+						message('error', '权限名称不能为空')
+						return false
+                    }
+                    if (!parame.type) {
+						message('error', '权限类型不能为空')
+						return false
+                    }
+                    if (!parame.orderNum) {
+						message('error', '权限排序不能为空')
+						return false
+					}
+					showLoading()
+                    requestServer('/uaa/authority', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+                            $('#editPermissionForm').form('clear')
+							$('#editPermissionDialog').dialog('close')
+							$('#permissionList').treegrid("reload"); // 获取权限列表
+							permission.methods.openTree() // 展开已展开的树
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                },
+
+                // 删除权限
+                deletePermission: function (id) {
+                    $.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/uaa/authority/' + id, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#permissionList').treegrid("reload"); // 获取权限列表
+									permission.methods.openTree() // 展开已展开的树
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+				
+				// 展开已展开的树
+				openTree: function () {
+					var list = permission.data.openTreeList
+					setTimeout(function () {
+						for (const i in list) {
+							$('#permissionList').treegrid('expand', list[i])
+						}
+					}, 300)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+                checkLogin() // 判断当前是否登录
+				permission.methods.getPermissionList() // 获取权限列表
+			}
+		}
+
+		// 初始化
+		$(function () {
+			permission.init()
+		})
+	</script>
+</body>
+
+</html>

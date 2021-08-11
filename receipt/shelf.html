@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>待上架</title>
+</head>
+
+<body>
+	<div class="super-theme-example shelf-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="SHELF_EXPORT" class="btn success hide" onclick="shelf.methods.shelfAllExport()">导出</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<!-- <input id="batchNumber" class="easyui-textbox" prompt="收货单号"> -->
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<button class="btn-34 info" onclick="shelf.methods.searchShelfList()"><i class="fa fa-search"></i></button>
+			<span class="shelf-all-number"></span>
+		</div>
+	</div>
+
+	<!--未上架列表-->
+	<div class="panel-block">
+		<table id="shelfList" style="width: 100%"></table>
+	</div>
+
+	<!--待上架日志弹框-->
+	<div id="shelfLogDialog" class="easyui-dialog" title="待上架日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#shelfLogBtn',modal: true,closed: true">
+		<table id="shelfLogList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="shelfLogBtn">
+		<button class="btn large" onclick="$('#shelfLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="shelfImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#shelfImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="shelfImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="shelfImgBtn">
+		<button class="btn large" onclick="$('#shelfImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var shelf = {
+			data: {
+				shelfList: [], // 未上架列表
+				shelfLogList: [] // 待上架日志列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.shelf-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.shelf-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+
+					// 更新时间
+					$('.shelf-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.shelf-head #updateTime').val('')
+
+					shelf.methods.getShelfList() // 获取未上架列表
+				},
+
+				// 查询
+				searchShelfList: function () {
+					shelf.methods.getShelfList() // 获取未上架列表
+					shelf.methods.getNotShelfCount() // 获取未上架总数
+				},
+
+				// 获取未上架列表
+				getShelfList: function () {
+					var createTime = $('.shelf-head #createTime').val()
+					var updateTime = $('.shelf-head #updateTime').val()
+					$('#shelfList').height($(window).height() - $('.shelf-head').height() - 180)
+					$('#shelfList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/shelves/lists',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.shelf-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+							updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+							productSkuBarcode: $('.shelf-head #productSkuBarcode').val() // 条形码
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							shelf.data.shelfList = data.datas.content
+							$('#shelfList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="shelf.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'quantity',
+								title: '待上架数量',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													${value}
+												</div>`
+									return html
+								}
+							}, {
+								field: 'createdAt',
+								title: '创建时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 50,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="btn success" onclick="shelf.methods.shelfLogDialog(${index})">日志</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+				
+				// 获取未上架总数
+				getNotShelfCount: function () {
+					var createTime = $('.shelf-head #createTime').val()
+					var updateTime = $('.shelf-head #updateTime').val()
+					requestJsonServer('/report/shelf/wait/count', 'GET', {
+						storehouseId: $('.shelf-head #storehouseId').val(), // 仓库
+						createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+						updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+						updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+						productSkuBarcode: $('.shelf-head #productSkuBarcode').val() // 条形码
+					}).then((response) => {
+						if (response.code == 1) {
+							var count = response.datas ? response.datas : 0
+							$('.shelf-all-number').text('未上架总数：' + count)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+							$('.shelf-all-number').text('未上架总数：0')
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 导出待上架（头部）
+				shelfAllExport: function () {
+					var createTime = $('.shelf-head #createTime').val()
+					var updateTime = $('.shelf-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/storehouse/shelves/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.shelf-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuBarcode'}).val($('.shelf-head #productSkuBarcode').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 待上架日志列表
+				shelfLogDialog: function (index) {
+					var obj = shelf.data.shelfList[index]
+					$('#shelfLogDialog').dialog('open')
+					$('#shelfLogList').datagrid({
+						method: 'GET',
+						url: host() + '/log/shelves',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							productSkuBarcode: obj.productSkuBarcode
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							shelf.data.shelfLogList = data.datas.content // 待上架日志列表
+							$('#shelfLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'product_sku_image',
+								title: '商品图片',
+								width: 55,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="shelf.methods.bigImg1(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'product_name',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_name',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '创建账号',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'updated_by',
+								title: '更新账号',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'change_type',
+								title: '事件',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 12) {
+										html = `<div>转上架</div>`
+									} else if (value == 13) {
+										html = `<div>收货</div>`
+									} else if (value == 15) {
+										html = `<div>拆单</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'change_comments',
+								title: '描述',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '创建时间',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'updated_at',
+								title: '更新时间',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+                // 查看大图
+				bigImg: function (index) {
+					var obj = shelf.data.shelfList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#shelfImg').attr('src', obj.productSkuImage)
+					$('#shelfImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（待上架日志）
+				bigImg1: function (index) {
+					var obj = shelf.data.shelfLogList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.product_sku_barcode}</div>
+									<div>${obj.product_name}</div>
+									<div>${obj.product_sku_name}</div>
+								</div>`
+					$('#shelfImg').attr('src', obj.product_sku_image)
+					$('#shelfImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				shelf.methods.initSearch() // 初始化条件查询
+				shelf.methods.getNotShelfCount() // 获取未上架总数
+			}
+		}
+
+		// 初始化
+		$(function () {
+			shelf.init()
+		})
+	</script>
+</body>
+
+</html>

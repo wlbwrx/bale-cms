@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>操作记录</title>
+</head>
+
+<body>
+	<div class="super-theme-example record-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="RECORD_EXPORT" class="btn success hide" onclick="record.methods.recordExport()">导出</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+            <input id="createTime" class="form-date" placeholder="操作时间">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+            <input id="shelf" class="easyui-textbox" prompt="库位">
+			<input id="changeType" class="easyui-combobox" prompt="类型">
+			<input id="createdBy" class="easyui-textbox" prompt="操作账号">
+			<button class="btn-34 info" onclick="record.methods.searchRecordList()"><i class="fa fa-search"></i></button>
+		</div>
+    </div>
+
+	<!--记录列表-->
+	<div class="panel-block">
+		<table id="recordList" style="width: 100%"></table>
+	</div>
+
+	<script type="text/javascript">
+		var record = {
+			data: {
+				recordList: [] // 记录列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.record-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+                    // 操作时间
+					$('.record-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+                    $('.record-head #createTime').val('')
+                    
+                    // 类型
+					$('.record-head #changeType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '类型'
+						}, {
+							id: 10,
+							text: '上架'
+						}, {
+							id: 20,
+							text: '下架'
+						}, {
+                            id: 30,
+							text: '移库'
+                        }, {
+                            id: 40,
+							text: '盘点'
+                        }, {
+                            id: 50,
+							text: '库位编辑'
+                        }],
+						onSelect: function (rec) {
+
+						}
+					})
+				},
+
+				// 查询
+				searchRecordList: function () {
+					record.methods.getRecordList('scrollTo') // 获取记录列表
+				},
+
+				// 获取记录列表
+				getRecordList: function (scrollTo) {
+                    var createTime = $('.record-head #createTime').val()
+                    $('#recordList').height($(window).height() - $('.record-head').height() - 180)
+					$('#recordList').datagrid({
+						method: 'GET',
+						url: host() + '/log/shelf',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.record-head #storehouseId').val(), // 仓库
+                            createBegainTime: timestamp(createTime.substring(0, 16)), // 操作开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 操作结束时间
+                            productSkuBarcode: $('.record-head #productSkuBarcode').val(), // 条形码
+                            shelf: $('.record-head #shelf').val(), // 库位
+                            changeType: $('.record-head #changeType').val(), // 类型
+                            createdBy: $('.record-head #createdBy').val() // 操作账号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							record.data.recordList = data.datas.content
+							if (scrollTo == 'scrollTo') {
+								$('#recordList').datagrid('scrollTo', 0)
+							}
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+                                field: 'shelf',
+								title: '库位',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    return `<div>${value ? value : '--'}</div>`
+                                }
+                            }, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    return `<div>${value ? value : '--'}</div>`
+                                }
+							}, {
+                                field: 'change_type',
+								title: '操作类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="success-msg">上架</div>`
+									} else if (value == 20) {
+										html = `<div class="error-msg">下架</div>`
+									} else if (value == 30) {
+										html = `<div class="error-msg">移库</div>`
+									} else if (value == 40) {
+										html = `<div class="error-msg">盘点</div>`
+									} else if (value == 50) {
+										html = `<div class="error-msg">库位编辑</div>`
+									}
+									return html
+								}
+                            }, {
+								field: 'before_quantity',
+								title: '原库位库存数',
+								width: 100
+							}, {
+								field: 'after_quantity',
+								title: '操作后库位库存数',
+								width: 100
+							}, {
+                                field: 'quantity',
+								title: '操作差异数量',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${row.after_quantity - row.before_quantity}</div>`
+								}
+                            }, {
+                                field: 'created_by',
+								title: '操作账号',
+								width: 100
+                            }, {
+                                field: 'created_at',
+								title: '操作时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+                            }]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							// 分页时候滚动条置顶
+							$("#recordList").datagrid("getPager").pagination({
+								onSelectPage: function (pageNumber, pageSize) {
+									$('#recordList').datagrid({pageNumber: pageNumber})
+									$('#recordList').datagrid("reload") // 获取记录列表
+									$('#recordList').datagrid('scrollTo', 0)
+								}
+							})
+						}
+					})
+                },
+
+				// 导出（头部）
+				recordExport: function () {
+                    var createTime = $('.record-head #createTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.record-head #storehouseId').val()))
+                    form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuBarcode'}).val($('.record-head #productSkuBarcode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'shelf'}).val($('.record-head #shelf').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'changeType'}).val($('.record-head #changeType').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'createdBy'}).val($('.record-head #createdBy').val()))
+                    form.appendTo($('body')).submit().remove()
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				record.methods.initSearch() // 初始化条件查询
+				record.methods.getRecordList() // 获取记录列表
+			}
+		} 
+
+		// 初始化
+		$(function () {
+			record.init()
+		})
+	</script>
+</body>
+
+</html>

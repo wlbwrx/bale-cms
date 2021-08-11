@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>拣货统计</title>
+</head>
+
+<body>
+
+	<div class="super-theme-example plickinglog-head">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="pickingTime" class="form-date" placeholder="选择时间">
+			<input id="pickingNumber" class="easyui-textbox" prompt="操作账号">
+			<input id="pickingStatus" class="easyui-combobox" prompt="拣货状态">
+			<button class="btn-34 info" onclick="pickingLog.methods.searchPlickingLogList()"><i class="fa fa-search"></i></button>
+			<span class="receipt-all-number" style="color:#333;margin-left:0;margin-top:10px;font-size:14px;display:block;">
+				<table>
+					<tr>
+						<td style="font-size:14px;">已拣货<span id="pickingHas" style="color:#57c5f7;"> 0 </span>波次 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">共<span id="pickingNum" style="color:#57c5f7;"> 0 </span> 单 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">sku数量<span id="pickingSku" style="color:#57c5f7;"> 0 </span> 个 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">sku总数<span id="pickingSkuNum" style="color:#57c5f7;"> 0 </span> 个 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+					</tr>
+					<tr>
+						<td style="font-size:14px;">未拣货<span id="pickingHasW" style="color:#57c5f7;"> 0 </span>波次 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">共<span id="pickingNumW" style="color:#57c5f7;"> 0 </span> 单 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">sku数量<span id="pickingSkuW" style="color:#57c5f7;"> 0 </span> 个 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+						<td style="font-size:14px;">sku总数<span id="pickingSkuNumW" style="color:#57c5f7;"> 0 </span> 个 &nbsp;&nbsp;&nbsp;&nbsp;</td>
+					</tr>
+				</table>
+			</span>
+		</div>
+	</div>
+
+	<!--拣货统计列表-->
+	<div class="panel-block picking-block">
+		<table id="pickingLogList" style="width: 100%"></table>
+	</div>
+
+	<script type="text/javascript">
+		var pickingLog = {
+			data: {
+				pickingLogList: [] // 拣货统计列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.plickinglog-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 时间范围
+					$('#pickingTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					})
+					// $('#pickingTime').val('') // 清空选择时间信息
+
+					// 拣货状态
+					$('.plickinglog-head #pickingStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '拣货状态'
+						}, {
+							id: 20,
+							text: '已拣货'
+						}, {
+							id: 10,
+							text: '待拣货'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					pickingLog.methods.getPlickingLogList() // 获取拣货统计列表
+					pickingLog.methods.todayDataShow()  // 今日数据展示
+					
+				},
+
+				// 查询
+				searchPlickingLogList: function () {
+					let timePklog = $('#pickingTime').val()
+					if(timePklog == ''){
+						$.messager.alert('提醒', '请选择时间');
+						return false
+					}
+					pickingLog.methods.getPlickingLogList() //  获取拣货统计列表
+					pickingLog.methods.todayDataShow() // 今日数据展示
+					$('#pickingLogList').datagrid('scrollTo', 0)
+				},
+
+				// 今日数据展示
+				todayDataShow: function () {
+					let timePklog = $('#pickingTime').val()
+					// 今日拣货统计数据显示
+					requestJsonServer('/report/wave/pick/count', 'get', {
+						storehouseId: $('.plickinglog-head #storehouseId').val(), // 仓库
+						updatedBegainTime: timestamp(timePklog.substring(0, 16)), // 创建开始时间
+						updatedEndTime: timestamp(timePklog.substring(19, 35)), // 创建结束时间
+						waveStatus: $('.plickinglog-head #pickingStatus').val(), // 拣货状态
+						updatedBy: $('.plickinglog-head #pickingNumber').val() // 操作账号
+					}).then(res => {
+						const resultData = res.datas
+						// 已拣货
+						$('#pickingHas').text(resultData.waveCodeCount != null ? resultData.waveCodeCount : 0) // 今日已拣货
+						$('#pickingNum').text(resultData.waveInvoiceCount != null ? resultData.waveInvoiceCount : 0) // 共拣货
+						$('#pickingSku').text(resultData.waveInvoiceSkuCount != null ? resultData.waveInvoiceSkuCount : 0) //sku数量
+						$('#pickingSkuNum').text(resultData.waveInvoiceSkuSum != null ? resultData.waveInvoiceSkuSum : 0) // sku总数
+						// 未拣货
+						$('#pickingHasW').text(resultData.waveCodeWCount != null ? resultData.waveCodeWCount : 0) // 今日已拣货
+						$('#pickingNumW').text(resultData.waveInvoiceWCount != null ? resultData.waveInvoiceWCount : 0) // 共拣货
+						$('#pickingSkuW').text(resultData.waveInvoiceSkuWCount != null ? resultData.waveInvoiceSkuWCount : 0) // sku数量
+						$('#pickingSkuNumW').text(resultData.waveInvoiceSkuWSum != null ? resultData.waveInvoiceSkuWSum : 0) // sku总数
+					}).catch(error => { 
+
+					})
+				}, 
+
+				// 获取拣货统计列表
+				getPlickingLogList: function () {
+					var time = $('#pickingTime').val() // 获取创建时间
+					$('#pickingLogList').height($(window).height() - $('.plickinglog-head').height() - 170)
+					$('#pickingLogList').datagrid({
+						method: 'GET',
+						url: host() + '/report/wave/pick/list', //拣货统计列表接口
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.plickinglog-head #storehouseId').val(), // 仓库
+							updatedBegainTime: timestamp(time.substring(0, 16)), // 创建开始时间
+							updatedEndTime: timestamp(time.substring(19, 35)), // 创建结束时间
+							waveStatus: $('.plickinglog-head #pickingStatus').val(), // 拣货状态
+							updatedBy: $('.plickinglog-head #pickingNumber').val() // 操作账号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							pickingLog.data.pickingLogList = data.datas.content
+							$('#pickingLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'waveCode',
+								title: '拣货波次单号',
+								fixed: true ,
+								width: 200,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'waveInvoiceCount',
+								title: '发货单数量',
+								width:30,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'invoiceList',
+								fixed: true ,
+								title: '<div class="pickNum_div"><span>发货单号</span><span>sku数量</span><span>sku总数</span></div>',
+								width: 400,
+								formatter: function (value, row, index) {
+									var newHml = [],hidePick='',_index = index
+									for(var i = 0;i < value.length;i++){
+										if(i < 3){
+											hidePick = ''
+										}else{
+											hidePick = 'hidePick hidePick'+index
+										}
+										newHml.push(`<div class="pickNum_box ${hidePick}">
+														<div class="pickNum_div">
+															<span>${value[i].invoiceCode != null ? value[i].invoiceCode : '--'}</span>
+															<span>${value[i].skuCount != null ? value[i].skuCount : '--' }</span>
+															<span>${value[i].skuSum != null ? value[i].skuSum : '--'}</span>
+														</div>
+													</div>`)
+									}
+									if(value.length > 3){
+										newHml.push(`<span class="btnRe btnRe${_index}" onclick="pickingLog.methods.receipDetails(${_index})">展开</span>`)
+									}
+									return newHml.join('')
+								}
+							}, {
+								field: 'updatedBy',
+								title: '操作账号',
+								width: 50,
+								formatter: function (value, row, index) {
+									if(value == 'null'){
+										return `<div>--</div>`
+									}else if(value == null){
+										return `<div>--</div>`
+									}else{
+										return `<div>${value}</div>`
+									}
+								}
+							}, {
+								field: 'waveStatus',
+								title: '拣货状态',
+								width: 50,
+								formatter: function (value, row, index) {
+									if(value == 10){
+										return `<div style="color:#f50;">待拣货</div>`
+									}else if(value == 20){
+										return `<div style="color:#0c6;">已拣货</div>`
+									}else{
+										return `<div style="color:#ccc;">未知状态</div>`
+									}
+								}
+							}, {
+								field: 'updateTime',
+								title: '拣货时间',
+								width: 200,
+								fixed: true ,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? timeFormat(value) : '--'}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 处理收货展示过多的问题
+				receipDetails: function(_index) {
+					if($('.hidePick' + _index).css('display') == 'none'){
+						$('.hidePick' + _index).show()
+						$('.btnRe' + _index).text('收起')
+					}else{
+						$('.hidePick' + _index).hide()
+						$('.btnRe' + _index).text('展开')
+					}
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				pickingLog.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			pickingLog.init()
+		})
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>配货统计</title>
+</head>
+
+<body>
+	<div class="super-theme-example pickprolog-head">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="pickproTime" class="form-date" placeholder="选择时间">
+			<input id="pickproNumber" class="easyui-textbox" prompt="操作账号">
+			<input id="pickproStatus" class="easyui-combobox" prompt="配货状态">
+			<button class="btn-34 info" onclick="pickproLog.methods.searchPickproLogList()"><i class="fa fa-search"></i></button>
+			<span class="receipt-all-number" style="color:#333;margin-left:30px;text-align:center;">
+				已配货:<span id="pickWaveCount" style="color:#57c5f7;"> 0 </span>波次   &nbsp;&nbsp;&nbsp;&nbsp;            
+				共:<span id="pickInvoiceCount" style="color:#57c5f7;"> 0 </span> 单  &nbsp;&nbsp;&nbsp;&nbsp;                     
+				sku数量:<span id="pickSkuCount" style="color:#57c5f7;"> 0 </span>个  &nbsp;&nbsp;&nbsp;&nbsp;
+				sku总数:<span id="pickSkuSum" style="color:#57c5f7;"> 0 </span>个  &nbsp;&nbsp;&nbsp;&nbsp;      
+			</span>
+		</div>
+	</div>
+
+	<!--配货统计列表-->
+	<div class="panel-block pickpro-block">
+		<table id="pickproLogList" style="width: 100%"></table>
+	</div>
+
+	<script type="text/javascript">
+		var pickproLog = {
+			data: {
+				pickproLogList: [] // 配货统计列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.pickprolog-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 时间范围
+					$('#pickproTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					})
+					// $('#pickproTime').val('') // 清空选择时间信息
+
+					// 配货状态
+					$('#pickproStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '配货状态'
+						}, {
+							id: 40,
+							text: '已配货'
+						}, {
+							id: 30,
+							text: '待配货'
+						}],
+						onSelect: function (rec) {
+							
+						}
+					})
+
+					pickproLog.methods.getPickproLogList() //  获取配货统计列表
+					pickproLog.methods.todayDataShow() // 今日数据展示
+				},
+
+				// 查询
+				searchPickproLogList: function () {
+					pickproLog.methods.getPickproLogList() //  获取配货统计列表
+					pickproLog.methods.todayDataShow() // 今日数据展示
+					$('#pickproLogList').datagrid('scrollTo', 0)
+				},
+
+				// 今日数据展示
+				todayDataShow: function () {
+					let seeaginTime = $('#pickproTime').val() // 获取创建时间
+					requestJsonServer('/report/invocie/match/count', 'get', {
+						storehouseId: $('.pickprolog-head #storehouseId').val(), // 仓库
+						updatedBegainTime: timestamp(seeaginTime.substring(0, 16)), // 创建开始时间
+						updatedEndTime: timestamp(seeaginTime.substring(19, 35)), // 创建结束时间
+						waveStatus: $('#pickproStatus').val(), // 配货状态
+						createdBy: $('#pickproNumber').val() // 操作账号
+					}).then(res => {
+						const resultData = res.datas
+						$('#pickWaveCount').text(resultData.waveCount != null ? resultData.waveCount : 0) // 共配货
+						$('#pickInvoiceCount').text(resultData.invoiceCount ? resultData.invoiceCount : 0) // 总共单数
+						$('#pickSkuCount').text(resultData.skuCount ? resultData.skuCount : 0) // sku数量
+						$('#pickSkuSum').text(resultData.skuSum ? resultData.skuSum : 0) // sku总数
+					}).catch(error => { 
+
+					})
+				},
+				
+				// 获取配货统计列表
+				getPickproLogList: function () {
+					let time = $('#pickproTime').val() //获取创建时间
+					if(time == ''){
+						$.messager.alert('提醒', '请选择时间');  
+						return false
+					}
+					$('#pickproLogList').height($(window).height() - $('.pickprolog-head').height() - 170)
+					$('#pickproLogList').datagrid({
+						method: 'GET',
+						url: host() + '/report/wave/match/list', // 配货列表接口
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.pickprolog-head #storehouseId').val(), // 仓库
+							updatedBegainTime: timestamp(time.substring(0, 16)), // 创建开始时间
+							updatedEndTime: timestamp(time.substring(19, 35)), // 创建结束时间
+							waveStatus: $('#pickproStatus').val(),    // 配货状态
+							updatedBy: $('#pickproNumber').val()    // 操作账号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							pickproLog.data.pickproLogList = data.datas.content
+							$('#pickproLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'waveCode',
+								title: '拣货波次单号',
+								width: 200,
+								fixed: true ,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'waveInvoiceCount',
+								title: '发货单数量',
+								width: 30,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'invoiceList',
+								fixed: true ,
+								title: '<div class="pickNum_div"><span>发货单号</span><span>sku数量</span><span>sku总数</span></div>',
+								width: 400,
+								formatter: function (value, row, index) {
+									var newHml = [],hidePick='',_index = index
+									for(var i = 0;i < value.length;i++){
+										if(i < 3){
+											hidePick = ''
+										}else{
+											hidePick = 'hidePick hidePick'+index
+										}
+										newHml.push(`<div class="pickNum_box ${hidePick}">
+														<div class="pickNum_div">
+															<span>${value[i].invoiceCode}</span>
+															<span>${value[i].skuCount}</span>
+															<span>${value[i].skuSum}</span>
+														</div>
+													</div>`)
+									}
+									if(value.length > 3){
+										newHml.push(`<span class="btnRe btnRe${_index}" onclick="pickproLog.methods.receipDetails(${_index})">展开</span>`)
+									}
+									return newHml.join('')
+								}
+							}, {
+								field: 'updatedBy',
+								title: '操作账号',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'waveStatus',
+								title: '配货状态',
+								width: 50,
+								formatter: function (value, row, index) {
+									if(value == 30){
+										return `<div style="color:#f50;">待配货</div>`
+									}else if(value == 40){
+										return `<div style="color:#0c6;">已配货</div>`
+									}else{
+										return `<div style="color:#ccc;">未知状态</div>`
+									}
+								}
+							}, {
+								field: 'updateTime',
+								title: '配货时间',
+								fixed: true ,
+								width: 200,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? timeFormat(value) : '--'}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 处理收货展示过多的问题
+				receipDetails: function(_index) {
+					if($('.hidePick' + _index).css('display') == 'none'){
+						$('.hidePick' + _index).show()
+						$('.btnRe' + _index).text('收起')
+					}else{
+						$('.hidePick' + _index).hide()
+						$('.btnRe' + _index).text('展开')
+					}
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				pickproLog.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			pickproLog.init()
+		})
+	</script>
+</body>
+
+</html>

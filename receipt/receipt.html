@@ -1,0 +1,1581 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>收货单</title>
+</head>
+
+<body>
+	<div class="super-theme-example receipt-head">
+		<div class="super-theme-btn">
+			<div class="see-data">
+				<!-- <button class="btn success" onclick="receipt.methods.seeReceiptDialog()">查看统计</button> -->
+			</div>
+			<!-- <div class="download-head">
+				<button data-value="RECEIPT_CREATE" class="btn success hide">创建收货单</button>
+				<input type="file" onchange="receipt.methods.createReceipt(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#createReceipt',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="createReceipt" class="download-btn-menu">
+					<div>
+						<a href="../excel/收货单模板.xls" class="success">下载收货单模板</a>
+					</div>
+				</div>
+			</div> -->
+			<!-- <div class="download-head">
+				<button data-value="RECEIPT_BIND" class="btn success hide">绑定物流单</button>
+				<input type="file" onchange="receipt.methods.bindLogistics(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#bindLogistics',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="bindLogistics" class="download-btn-menu">
+					<div>
+						<a href="../excel/收货单绑定物流单模板.xls" class="success">下载绑定物流单模板</a>
+					</div>
+				</div>
+			</div> -->
+			<div class="download-head">
+				<button data-value="RECEIPT" class="btn success hide" onclick="receipt.methods.receiptScanDialog()">扫描收货</button>
+			</div>
+			<div class="download-head">
+				<button data-value="RECEIPT_EXOPRT" class="btn success hide" onclick="receipt.methods.receiptAllExport()">导出收货单</button>
+			</div>
+			<div class="download-head">
+				<button data-value="RECEIPT_EXOPRT" class="btn success hide" onclick="receipt.methods.receiptAllLogExport()">导出收货单日志</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="batchNumber" class="easyui-textbox" prompt="收货单号">
+			<input id="logisticCode" class="easyui-textbox" prompt="物流单号">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<input id="batchReceiptStatus" class="easyui-combobox" prompt="状态">
+			<button class="btn-34 info" onclick="receipt.methods.searchReceiptList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--收货单列表-->
+	<div class="panel-block">
+		<table id="receiptList" style="width: 100%;"></table>
+	</div>
+
+	<!--查看统计-->
+	<div id="seeReceiptDialog" class="easyui-dialog" title="查看统计" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#seeReceiptBtn',modal: true,closed: true">
+		<div>
+			<input id="createTimeSon" class="form-date" placeholder="创建时间">
+			<input id="updateTimeSon" class="form-date" placeholder="更新时间">
+			<input id="batchNumberSon" class="easyui-textbox" prompt="收货单号">
+			<input id="logisticCodeSon" class="easyui-textbox" prompt="物流单号">
+			<input id="productSkuBarcodeSon" class="easyui-textbox" prompt="条形码">
+			<input id="batchReceiptStatusSon" class="easyui-combobox" prompt="状态">
+			<button class="btn-34 info" onclick="receipt.methods.seeReceipt()"><i class="fa fa-search"></i></button>
+		</div>
+		<div id="seeReceipt" class="panel-log" style="width: 100%;height: 480px;margin-top: 20px;overflow: auto;"></div>
+	</div>
+	<div id="seeReceiptBtn">
+		<button class="btn large" onclick="$('#seeReceiptDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--扫描收货-->
+	<div id="receiptScanDialog" class="easyui-dialog" title="扫描收货" style="width: 1000px;height: 700px;padding: 20px;" data-options="buttons: '#receiptScanBtn',modal: true,closed: true">
+		<div class="receipt-scan">
+			<div class="receipt-scan-left">
+				<div id="formBatchNumber" class="form-receipt"></div>
+				<input id="scanBatchNumber" class="form-sacn" placeholder="扫描收货单号">
+				<input id="scanSkuBarcode" class="form-sacn" placeholder="扫描条形码">
+				<div id="receiptScanList" style="width: 100%;height: 480px;margin-top: 20px;overflow: auto;"></div>
+			</div>
+			<div class="receipt-scan-right">
+
+			</div>
+		</div>
+	</div>
+	<div id="receiptScanBtn">
+		<button class="btn large" onclick="$('#receiptScanDialog').dialog('close')">关闭</button>
+		<button class="btn success large" onclick="receipt.methods.receiptScanAll()">收货</button>
+	</div>
+
+	<!--单个收货-->
+	<div id="receiptProductDialog" class="easyui-dialog" title="单个收货" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#receiptProductBtn',modal: true,closed: true">
+		<div id="receiptProduct" style="width: 100%;height: 100%;"></div>
+	</div>
+	<div id="receiptProductBtn">
+		<button class="btn large" onclick="$('#receiptProductDialog').dialog('close')">关闭</button>
+		<button class="btn success large" onclick="receipt.methods.receiptProduct()">收货</button>
+	</div>
+
+	<!--批量收货-->
+	<div id="receiptProductAllDialog" class="easyui-dialog" title="批量收货" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#receiptProductAllBtn',modal: true,closed: true">
+		<div id="receiptProductAllList" style="width: 100%;height: 100%;"></div>
+	</div>
+	<div id="receiptProductAllBtn">
+		<button class="btn large" onclick="$('#receiptProductAllDialog').dialog('close')">关闭</button>
+		<button class="btn success large" onclick="receipt.methods.receiptProductAll()">收货</button>
+	</div>
+
+	<!--批量打印-->
+	<div id="printBarCodeAllDialog" class="easyui-dialog" title="批量打印" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#printBarCodeAllBtn',modal: true,closed: true">
+		<div id="printBarCodeAllList" style="width: 100%;height: 100%;"></div>
+	</div>
+	<div id="printBarCodeAllBtn">
+		<button class="btn large" onclick="$('#printBarCodeAllDialog').dialog('close')">关闭</button>
+		<button class="btn success large" onclick="receipt.methods.printBarCodeAll()">打印</button>
+	</div>
+
+	<!--收货单日志弹框-->
+	<div id="receiptLogDialog" class="easyui-dialog" title="收货单日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#receiptLogBtn',modal: true,closed: true">
+		<table id="receiptLogList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="receiptLogBtn">
+		<button class="btn large" onclick="$('#receiptLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--创建收货单失败明细弹框-->
+	<div id="createReceiptDialog" class="easyui-dialog" title="创建收货单失败明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#createReceiptBtn',modal: true,closed: true">
+		<table id="createReceiptList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="createReceiptBtn">
+		<button class="btn large" onclick="$('#createReceiptDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="receiptImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#receiptImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="receiptImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="receiptImgBtn">
+		<button class="btn large" onclick="$('#receiptImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var receipt = {
+			data: {
+				receiptList: [], // 收货单列表
+				receiptLogList: [], // 收货单日志列表
+				canQuantity: '', // 当前收货可收数量
+				receiptIndex: '', // 当前操作的收货单下标
+				receiptScanList: [], // 扫描收货中的商品列表
+				sweepSkuList: [] // 已扫描商品列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.receipt-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.receipt-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+
+					// 更新时间
+					$('.receipt-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.receipt-head #updateTime').val('')
+
+					// 物流单号
+					$('.receipt-head #logisticCode').textbox({
+						inputEvents: $.extend({}, $.fn.textbox.defaults.inputEvents, {
+							keyup: function (event) {
+								if (event.keyCode == 13) {
+									receipt.methods.getReceiptList() // 获取收货单列表
+									$('#receiptList').datagrid('scrollTo', 0)
+								}
+							}
+						})
+					})
+
+					// 条形码
+					$('.receipt-head #productSkuBarcode').textbox({
+						inputEvents: $.extend({}, $.fn.textbox.defaults.inputEvents, {
+							keyup: function (event) {
+								if (event.keyCode == 13) {
+									receipt.methods.getReceiptList() // 获取收货单列表
+								}
+							}
+						})
+					})
+
+					// 收货状态
+					$('.receipt-head #batchReceiptStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '收货状态'
+						}, {
+							id: 10,
+							text: '待收货'
+						}, {
+							id: 20,
+							text: '已完成'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					receipt.methods.getReceiptList() // 获取收货单列表
+				},
+
+				// 查询
+				searchReceiptList: function () {
+					receipt.methods.getReceiptList() // 获取收货单列表
+					receipt.methods.getReceiptCount() // 获取收货统计数据
+					$('#receiptList').datagrid('scrollTo', 0)
+				},
+
+				// 获取收货单列表
+				getReceiptList: function () {
+					var createTime = $('.receipt-head #createTime').val()
+					var updateTime = $('.receipt-head #updateTime').val()
+					$('#receiptList').height($(window).height() - $('.receipt-head').height() - 180)
+					$('#receiptList').datagrid({
+						method: 'GET',
+						url: host() + '/batchreceipt/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						scrollOnSelect: false, // 禁止点击行内元素跳到行头
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.receipt-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+							updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+							batchNumber: $('.receipt-head #batchNumber').val(), // 收货单号
+							logisticCode: $('.receipt-head #logisticCode').val(), // 物流单号
+							productSkuBarcode: $('.receipt-head #productSkuBarcode').val(), // 条形码
+							batchReceiptStatus: $('.receipt-head #batchReceiptStatus').val() // 状态
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							for (const i in data.datas.content) {
+								data.datas.content[i].created_at = timeFormat(data.datas.content[i].created_at)
+							}
+							receipt.data.receiptList = data.datas.content
+							// $('#receiptList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: false, // 自适应宽度
+						columns: [
+							[{
+								field: 'batch_number',
+								title: '收货单号',
+								width: 160,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'batch_receipt_logistics',
+								title: '物流',
+								width: 150,
+								formatter: function (value, row, index) {
+									var html = '<div class="table-colums-group">'
+									for (const i in value) {
+										html += `<div>${value[i].logisticCompany} ${value[i].logisticCode}</div>`
+									}
+									html += '</div>'
+									return html
+								}
+							}, {
+								field: 'progress',
+								title: '收货进度',
+								width: 80,
+								formatter: function (value, row, index) {
+									var list = row.batch_receipt_details
+									var shelveQuantity = 0, originalQuantity = 0
+									var html = ''
+									for (const i in list) {
+										shelveQuantity += list[i].shelveQuantity
+										originalQuantity += list[i].originalQuantity
+									}
+									if (shelveQuantity != originalQuantity) {
+										html += `<div>${shelveQuantity}/${originalQuantity}</div>`
+									} else {
+										html += `<div class="success-msg">已完成</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'storehouse_name',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'batch_receipt_details',
+								title: '商品',
+								width: 660,
+								formatter: function (value, row, index) {
+									var batchNumber = $('.receipt-head #batchNumber').val()
+									var logisticCode = $('.receipt-head #logisticCode').val()
+									// 通过收货单号和物流单号查询的显示全部商品
+									if (batchNumber != '' || logisticCode != '') {
+										var html = `<div id="proList_${index}" class="table-colums-group">`
+										for (const i in value) {
+											html += `<div class="table-merge">
+														<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${value[i].productSkuImage}" /></div>
+														<div>${value[i].productSkuBarcode}</div>
+														<div><span>${value[i].productSkuName}</span> - <span>${value[i].productName}</span></div>
+														<div>${value[i].shelveQuantity}/${value[i].originalQuantity}</div>
+														<div>`
+											if (value[i].shelveQuantity != value[i].originalQuantity) {
+												html += `<a data-value="RECEIPT" class="hide" onclick="receipt.methods.receiptProductDialog(${index}, ${i})">收货</a>`
+											} else {
+												html += `<span class="placeholder-1"></span>`
+											}
+											html += `<a onclick="receipt.methods.printBarCodeDialog(${index}, ${i})">打印条码</a>
+														</div>
+													</div>`
+										}
+										if (value.length > 3) {
+											html += `<div class="table-merge table-more" onclick="receipt.methods.hideMore(${index})">隐藏</div>`
+										}
+										html += `</div>`
+									} else {
+										var html = `<div id="proList_${index}" class="table-colums-group">`
+										for (const i in value) {
+											if (i >= 3) {
+												continue
+											}
+											html += `<div class="table-merge">
+														<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${value[i].productSkuImage}" /></div>
+														<div>${value[i].productSkuBarcode}</div>
+														<div><span>${value[i].productSkuName}</span> - <span>${value[i].productName}</span></div>
+														<div>${value[i].shelveQuantity}/${value[i].originalQuantity}</div>
+														<div>`
+											if (value[i].shelveQuantity != value[i].originalQuantity) {
+												html += `<a data-value="RECEIPT" class="hide" onclick="receipt.methods.receiptProductDialog(${index}, ${i})">收货</a>`
+											} else {
+												html += `<span class="placeholder-1"></span>`
+											}
+											html += `<a class="hide" onclick="receipt.methods.printBarCodeDialog(${index}, ${i})">打印条码</a>
+														</div>
+													</div>`
+										}
+										if (value.length > 3) {
+											html += `<div class="table-merge table-more" onclick="receipt.methods.showMore(${index})">展开</div>`
+										}
+										html += `</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'batch',
+								title: '批量操作',
+								width: 180,
+								formatter: function (value, row, index) {
+									var list = row.batch_receipt_details
+									var number1 = 0, number2 = 0
+									for (const i in list) {
+										number1 += list[i].originalQuantity
+										number2 += list[i].shelveQuantity
+									}
+									var html = `<div class="table-btn-group">`
+									if (number1 != number2) {
+										html += `<button data-value="RECEIPT" class="btn success hide" onclick="receipt.methods.receiptProductAllDialog(${index})">批量收货</button>`
+									} else {
+										html += `<span class="placeholder-2"></span>`
+									}
+									html += `<button class="btn success" onclick="receipt.methods.printBarCodeAllDialog(${index})">批量打印</button>
+												</div>`
+									return html
+								}
+							}, {
+								field: 'created_at',
+								title: '创建时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'updated_at',
+								title: '更新时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'batch_receipt_status',
+								title: '收货单状态',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="error-msg">待收货</div>`
+									} else if (value == 20) {
+										html = `<div class="success-msg">已完成</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'comments',
+								title: '备注',
+								width: 300,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 130,
+								formatter: function (value, row, index) {
+									// <button class="btn info" onclick="receipt.methods.receiptDetailsDialog(${index})">明细</button>
+									// <button data-value="RECEIPT_DELETE" class="btn error hide" onclick="receipt.methods.deleteReceipt('${row.batch_number}')">删除</button>
+									// <button data-value="RECEIPT_EXOPRT" class="btn success hide" onclick="receipt.methods.receiptLogExport(${index})">导出</button>
+									var html = `<div class="table-btn-group">
+													<button class="btn success" onclick="receipt.methods.receiptLogDialog(${index})">日志</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							// 分页时候滚动条置顶
+							$("#receiptList").datagrid("getPager").pagination({
+								onSelectPage: function (pageNumber, pageSize) {
+									$('#receiptList').datagrid({pageNumber: pageNumber})
+									$('#receiptList').datagrid("reload") // 获取收货单列表
+									$('#receiptList').datagrid('scrollTo', 0)
+								}
+							})
+						}
+					})
+				},
+
+				// 获取收货统计数据
+				getReceiptCount: function () {
+					var createTime = $('.receipt-head #createTime').val()
+					var updateTime = $('.receipt-head #updateTime').val()
+					requestJsonServer('/batchreceipt/personalize/info', 'GET', {
+						storehouseId: $('.receipt-head #storehouseId').val(), // 仓库
+						createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+						updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+						updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+						batchNumber: $('.receipt-head #batchNumber').val(), // 收货单号
+						logisticCode: $('.receipt-head #logisticCode').val(), // 物流单号
+						productSkuBarcode: $('.receipt-head #productSkuBarcode').val(), // 条形码
+						batchReceiptStatus: $('.receipt-head #batchReceiptStatus').val() // 状态
+					}).then((response) => {
+						if (response.code == 1) {
+							var str = `收货单总数：${response.datas.batchNumberCount != null ? response.datas.batchNumberCount : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								已完成：${response.datas.batchNumberStatus20 != null ? response.datas.batchNumberStatus20 : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								未完成：${response.datas.batchNumberStatus10 != null ? response.datas.batchNumberStatus10 : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								sku个数：${response.datas.productSkuCount != null ? response.datas.productSkuCount : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								总采购：${response.datas.productSkuSum != null ? response.datas.productSkuSum : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								已签收：${response.datas.rproductSkuSum != null ? response.datas.rproductSkuSum : '--'}&nbsp;&nbsp;&nbsp;&nbsp;
+								未签收：${response.datas.notProductSkuSum != null ? response.datas.notProductSkuSum : '--'}`
+							$('.see-data').html(str)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 展开
+				showMore: function (index) {
+					var list = receipt.data.receiptList[index].batch_receipt_details
+					var html = ''
+					$('#proList_' + index).empty()
+					for (const i in list) {
+						html += `<div class="table-merge">
+									<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${list[i].productSkuImage}" /></div>
+									<div>${list[i].productSkuBarcode}</div>
+									<div><span>${list[i].productSkuName}</span> - <span>${list[i].productName}</span></div>
+									<div>${list[i].shelveQuantity}/${list[i].originalQuantity}</div>
+									<div>`
+						if (list[i].shelveQuantity != list[i].originalQuantity) {
+							html += `<a data-value="RECEIPT" class="hide" onclick="receipt.methods.receiptProductDialog(${index}, ${i})">收货</a>`
+						} else {
+							html += `<span class="placeholder-1"></span>`
+						}
+						html += `<a data-value="RECEIPT_PRINT" class="hide" onclick="receipt.methods.printBarCodeDialog(${index}, ${i})">打印条码</a>
+									</div>
+								</div>`
+					}
+					html += `<div class="table-merge table-more" onclick="receipt.methods.hideMore(${index})">隐藏</div>`
+					$('#proList_' + index).append(html)
+					permissionButton() // 权限按钮
+				},
+
+				// 隐藏
+				hideMore: function (index) {
+					var list = receipt.data.receiptList[index].batch_receipt_details
+					var html = ''
+					$('#proList_' + index).empty()
+					for (const i in list) {
+						if (i >= 3) {
+							continue
+						}
+						html += `<div class="table-merge">
+									<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${list[i].productSkuImage}" /></div>
+									<div>${list[i].productSkuBarcode}</div>
+									<div><span>${list[i].productSkuName}</span> - <span>${list[i].productName}</span></div>
+									<div>${list[i].shelveQuantity}/${list[i].originalQuantity}</div>
+									<div>`
+						if (list[i].shelveQuantity != list[i].originalQuantity) {
+							html += `<a data-value="RECEIPT" class="hide" onclick="receipt.methods.receiptProductDialog(${index}, ${i})">收货</a>`
+						} else {
+							html += `<span class="placeholder-1"></span>`
+						}
+						html += `<a data-value="RECEIPT_PRINT" class="hide" onclick="receipt.methods.printBarCodeDialog(${index}, ${i})">打印条码</a>
+									</div>
+								</div>`
+					}
+					html += `<div class="table-merge table-more" onclick="receipt.methods.showMore(${index})">展开</div>`
+					$('#proList_' + index).append(html)
+					permissionButton() // 权限按钮
+				},
+
+				// 查看统计弹框
+				seeReceiptDialog: function () {
+					$('#seeReceiptDialog').dialog('open')
+
+					// 创建时间
+					$('#seeReceiptDialog #createTimeSon').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('#seeReceiptDialog #createTimeSon').val('')
+
+					// 更新时间
+					$('#seeReceiptDialog #updateTimeSon').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('#seeReceiptDialog #updateTimeSon').val('')
+
+					// 收货状态
+					$('#seeReceiptDialog #batchReceiptStatusSon').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '收货状态'
+						}, {
+							id: 10,
+							text: '待收货'
+						}, {
+							id: 20,
+							text: '已完成'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					receipt.methods.seeReceipt() // 查看统计
+				},
+
+				// 查看统计
+				seeReceipt: function () {
+					var createTime = $('#seeReceiptDialog #createTimeSon').val()
+					var updateTime = $('#seeReceiptDialog #updateTimeSon').val()
+					requestJsonServer('/batchreceipt/personalize/info', 'GET', {
+						createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+						updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+						updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+						batchNumber: $('#seeReceiptDialog #batchNumberSon').val(), // 收货单号
+						logisticCode: $('#seeReceiptDialog #logisticCodeSon').val(), // 物流单号
+						productSkuBarcode: $('#seeReceiptDialog #productSkuBarcodeSon').val(), // 条形码
+						batchReceiptStatus: $('#seeReceiptDialog #batchReceiptStatusSon').val() // 状态
+					}).then((response) => {
+						if (response.code == 1) {
+							var html = `<div>
+											<span>sku个数</span>
+											<span>${response.datas.productSkuCount != null ? response.datas.productSkuCount : '--'}</span>
+										</div>
+										<div>
+											<span>总采购</span>
+											<span>${response.datas.productSkuSum != null ? response.datas.productSkuSum : '--'}</span>
+										</div>
+										<div>
+											<span>已签收</span>
+											<span>${response.datas.rproductSkuSum != null ? response.datas.rproductSkuSum : '--'}</span>
+										</div>
+										<div>
+											<span>未签收</span>
+											<span>${response.datas.notProductSkuSum != null ? response.datas.notProductSkuSum : '--'}</span>
+										</div>`
+							$('#seeReceipt').html(html)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 创建收货单
+				createReceipt: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', response.message)
+								return
+							}
+							// 创建收货单提交
+							receipt.methods.createReceiptNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 创建收货单提交
+				createReceiptNext: function (paramList) {
+					var list = [] // 处理后的数据
+					var index = -1 // 当前收货单单下标
+					for (let i = 1; i < paramList.length; i++) {
+						if (paramList[i]['收货单号']) {
+							// push收货单
+							list.push({
+								'storehouseId': paramList[i]['仓库ID'],
+								'batchNumber': paramList[i]['收货单号'],
+								'comments': paramList[i]['备注'],
+								'batchReceiptDetails': [{
+									'productSkuBarcode': paramList[i]['商品信息'],
+									'productName': paramList[i]['__EMPTY'],
+									'productSkuImage': paramList[i]['__EMPTY_1'],
+									'productSkuName': paramList[i]['__EMPTY_2'],
+									'originalQuantity': paramList[i]['__EMPTY_3']
+								}],
+								'batchReceiptLogistics': [{
+									'logisticCode': paramList[i]['物流信息'],
+									'carrierCode': paramList[i]['__EMPTY_4'],
+									'logisticCompany': paramList[i]['__EMPTY_5']
+								}]
+							})
+							index++
+						} else {
+							// push商品和物流
+							if (paramList[i]['商品信息']) {
+								list[index]['batchReceiptDetails'].push({
+									'productSkuBarcode': paramList[i]['商品信息'],
+									'productName': paramList[i]['__EMPTY'],
+									'productSkuImage': paramList[i]['__EMPTY_1'],
+									'productSkuName': paramList[i]['__EMPTY_2'],
+									'originalQuantity': paramList[i]['__EMPTY_3']
+								})
+							}
+							if (paramList[i]['物流信息']) {
+								list[index]['batchReceiptLogistics'].push({
+									'logisticCode': paramList[i]['物流信息'],
+									'carrierCode': paramList[i]['__EMPTY_4'],
+									'logisticCompany': paramList[i]['__EMPTY_5']
+								})
+							}
+						}
+					}
+
+					requestServer('/api/batchreceipt/create', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 创建收货单失败明细
+							if (response.datas.length == 0) {
+								message('success', '创建成功')
+							} else {
+								$('#createReceiptDialog').dialog('open')
+								$('#createReceiptList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'batchNumber',
+											title: '收货单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'validateMsg',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							receipt.methods.getReceiptList() // 获取收货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 绑定物流单
+				bindLogistics: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', response.message)
+								return
+							}
+							// 绑定物流单提交
+							receipt.methods.bindLogisticsNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 绑定物流单提交
+				bindLogisticsNext: function (paramList) {
+					var list = [] // 处理后的数据
+					for (let i = 0; i < paramList.length; i++) {
+						list.push({
+							'batchNumber': paramList[i]['收货单号'],
+							'logisticCode': paramList[i]['物流单号'],
+							'logisticCompany': paramList[i]['公司名称'],
+							'carrierCode': paramList[i]['公司代码']
+						})
+					}
+
+					requestServer('/api/batchreceipt/logistics', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							message('success', '绑定成功')
+							receipt.methods.getReceiptList() // 获取收货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 扫描收货弹框
+				receiptScanDialog: function () {
+					$('#receiptScanDialog').dialog('open')
+					$('#formBatchNumber').hide()
+					$('#scanBatchNumber').val('')
+					$('#scanBatchNumber').show()
+					$('#scanSkuBarcode').val('')
+					$('#scanSkuBarcode').hide()
+					$('#receiptScanList').html('')
+					$('.receipt-scan-right').html('')
+					receipt.data.receiptScanList = []
+					receipt.data.sweepSkuList = []
+				},
+
+				// 监听扫描收货单号事件
+				monitorScan: function () {
+					$('#scanBatchNumber').keydown(function (event) {
+						if (event.keyCode == 13) {
+							var batchNumber = $(this).val()
+							if (batchNumber) {
+
+								// 查询收货单下的商品
+								requestJsonServer('/batchreceipt/list', 'GET', {
+									// storehouseId: $('.receipt-head #storehouseId').val(),
+									batchNumber: batchNumber
+								}).then((response) => {
+									if (response.code == 1) {
+										if (response.datas.content.length > 0) {
+											receipt.data.receiptScanList = response.datas.content // 扫描收货中的商品列表
+											$('#formBatchNumber').text(batchNumber)
+											$('#formBatchNumber').show()
+											$('#scanBatchNumber').hide()
+											$('#scanSkuBarcode').show()
+											$('#scanSkuBarcode').focus()
+										} else {
+											message('error', '没有找到收货单号')
+										}
+									} else if (response.code == -1 || response.code == -3) {
+										loginOut()
+									} else {
+										message('error', response.message)
+									}
+									$('#receiptProductBtn').children().eq(1).removeClass('grey')
+									$('#receiptProductBtn').children().eq(1).attr('disabled', false)
+								}).catch((error) => {
+									console.log(error)
+								})
+
+							}
+						}
+					})
+				},
+
+				// 监听扫描条形码事件
+				skuScan: function () {
+					$('#scanSkuBarcode').keydown(function (event) {
+						if (event.keyCode == 13) {
+							var sku = $(this).val()
+							if (sku) {
+
+								// 判断商品列表中是否有该商品
+								if (receipt.methods.isSku(sku)) {
+									// 判断已扫描商品列表中是否有该商品
+									if (receipt.methods.isSweepSku(sku)) {
+										// 给已扫描列表中商品增加数量
+										var index = parseInt(receipt.methods.isSweepIndex(sku)) // 获取已扫描商品列表该商品下标
+										var list = receipt.data.sweepSkuList // 已扫描商品列表
+										if (list[index].number < (list[index].originalQuantity - list[index].shelveQuantity)) {
+											list[index].number = parseInt(list[index].number) + 1
+											$('#sweepIndex_' + index).val(list[index].number)
+										} else {
+											message('error', '商品个数达到上限')
+										}
+										receipt.methods.showDetails(list[index]) // 显示当前的商品详情
+									} else {
+										// 给已扫描列表中添加商品
+										var i = parseInt(receipt.methods.isIndex(sku)) // 获取商品列表该商品下标
+										receipt.data.receiptScanList[0].batch_receipt_details[i].number = 1 // 默认值
+                            			receipt.data.sweepSkuList.push(receipt.data.receiptScanList[0].batch_receipt_details[i]) // 已扫描商品列表
+									
+										var sweepIndex = parseInt(receipt.methods.isSweepIndex(sku)) // 获取已扫描商品列表该商品下标
+										var obj = receipt.data.sweepSkuList[sweepIndex] // 已扫描的商品
+										var html = `<div class="table-merge">
+														<div><img class="table-colums-img" onclick="receipt.methods.bigImg2(${sweepIndex})" src="${obj.productSkuImage}" /></div>
+														<div>${obj.productSkuBarcode}</div>
+														<div><span>${obj.productName}</span> - <span>${obj.productSkuName}</span></div>
+														<div>${obj.shelveQuantity}/${obj.originalQuantity}</div>
+														<div>
+															<input type="hidden" name="productSkuBarcode" value="${obj.productSkuBarcode}">`
+										if (obj.shelveQuantity != obj.originalQuantity) {
+											html += `<input id="sweepIndex_${sweepIndex}" type="number" name="quantity" value="${obj.number}" onchange="receipt.methods.scanManualAll(${sweepIndex})" class="form-input" style="width: 50px;" />`
+										}
+										html += `</div>
+												</div>`
+										$('#receiptScanList').prepend(html)
+										receipt.methods.showDetails(obj) // 显示当前的商品详情
+									}
+									$('#scanSkuBarcode').val('')
+									$('#scanSkuBarcode').focus()
+								} else {
+									message('error', '商品列表无该商品')
+									$('#scanSkuBarcode').val('')
+									$('#scanSkuBarcode').focus()
+								}
+
+							}
+						}
+					})
+				},
+
+				// 判断商品列表中是否有该商品
+                isSku: function (sku) {
+                    var list = receipt.data.receiptScanList[0].batch_receipt_details
+                    // 判断是否有该sku
+                    for (const i in list) {
+                        if (sku == list[i].productSkuBarcode) {
+                            return true
+                        }
+                    }
+                    return false
+				},
+				
+				// 判断已扫描商品列表中是否有该商品
+                isSweepSku: function (sku) {
+                    var list = receipt.data.sweepSkuList // 已扫描商品列表
+                    for (const i in list) {
+                        if (sku == list[i].productSkuBarcode) {
+                            return true
+                        }
+                    }
+                    return false
+                },
+
+				// 获取商品列表该商品下标
+                isIndex: function (sku) {
+                    var list = receipt.data.receiptScanList[0].batch_receipt_details
+                    for (const i in list) {
+                        if (sku == list[i].productSkuBarcode) {
+                            return i
+                        }
+                    }
+				},
+				
+				// 获取已扫描商品列表该商品下标
+                isSweepIndex: function (sku) {
+                    var list = receipt.data.sweepSkuList // 已扫描商品列表
+                    for (const i in list) {
+                        if (sku == list[i].productSkuBarcode) {
+                            return i
+                        }
+                    }
+                },
+
+				// 显示当前的商品详情
+				showDetails: function (obj) {
+					var html = `<img src="${obj.productSkuImage}" />
+								<div class="receipt-scan-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('.receipt-scan-right').html(html)
+				},
+
+				// 手动收货数量（扫描）
+				scanManualAll: function (index) {
+					var obj = receipt.data.sweepSkuList[index]
+					var number = $('#sweepIndex_' + index).val()
+					var canQuantity = obj.originalQuantity - obj.shelveQuantity // 当前收货可收数量
+					if (number > 0) {
+						if (number > canQuantity) {
+							$('#sweepIndex_' + index).val(parseInt(canQuantity))
+							receipt.data.sweepSkuList[index].number = parseInt(canQuantity)
+						} else {
+							receipt.data.sweepSkuList[index].number = number
+						}
+					} else {
+						$('#sweepIndex_' + index).val(0)
+						receipt.data.sweepSkuList[index].number = 0
+						message('error', '数量不能小于0')
+					}
+				},
+
+				// 扫描收货
+				receiptScanAll: function () {
+					var paramList = []
+
+					$('#receiptScanList').find('.table-merge').each(function () {
+						var storehouseId = receipt.data.receiptScanList[0].storehouse_id
+						var batchNumber = receipt.data.receiptScanList[0].batch_number
+						var productSkuBarcode = $(this).find('input[name="productSkuBarcode"]').val()
+						var quantity = $(this).find('input[name="quantity"]').val()
+						if (quantity > 0) {
+							paramList.push({
+								storehouseId: storehouseId,
+								batchNumber: batchNumber,
+								productSkuBarcode: productSkuBarcode,
+								quantity: quantity
+							})
+						}
+					})
+
+					if (paramList.length > 0) {
+						$('#receiptScanBtn').children().eq(1).addClass('grey')
+						$('#receiptScanBtn').children().eq(1).attr('disabled', true)
+						showLoading()
+						requestServer('/batchreceipt/shelves', 'POST', paramList).then((response) => {
+							if (response.code == 1) {
+								message('success', '收货成功')
+								$('#receiptScanDialog').dialog('close')
+								$('#receiptList').datagrid("reload"); // 获取收货单列表
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							$('#receiptScanBtn').children().eq(1).removeClass('grey')
+							$('#receiptScanBtn').children().eq(1).attr('disabled', false)
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '收货数量不能为空')
+					}
+				},
+
+				// 导出收货单（头部）
+				receiptAllExport: function () {
+					var createTime = $('.receipt-head #createTime').val()
+					var updateTime = $('.receipt-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/batchreceipt/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.receipt-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'batchNumber'}).val($('.receipt-head #batchNumber').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'logisticCode'}).val($('.receipt-head #logisticCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'batchReceiptStatus'}).val($('.receipt-head #batchReceiptStatus').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 导出收货单日志（头部）
+				receiptAllLogExport: function () {
+					var createTime = $('.receipt-head #createTime').val()
+					var updateTime = $('.receipt-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/receipt/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.receipt-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'batchNumber'}).val($('.receipt-head #batchNumber').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'logisticCode'}).val($('.receipt-head #logisticCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'batchReceiptStatus'}).val($('.receipt-head #batchReceiptStatus').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 收货单日志列表
+				receiptLogDialog: function (index) {
+					var obj = receipt.data.receiptList[index]
+					$('#receiptLogDialog').dialog('open')
+					$('#receiptLogList').datagrid({
+						method: 'GET',
+						url: host() + '/log/receipt',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouse_id,
+							batchNumber: obj.batch_number
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							receipt.data.receiptLogList = data.datas.content // 收货单日志列表
+							$('#receiptLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'batch_number',
+								title: '收货单号',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_image',
+								title: '商品图片',
+								width: 55,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="receipt.methods.bigImg1(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'product_name',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_name',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '收货数量',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'action_type',
+								title: '操作类型',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div>收货单创建</div>`
+									} else if (value == 2) {
+										html = `<div>收货单收货</div>`
+									} else if (value == 3) {
+										html = `<div>取消单个sku</div>`
+									} else if (value == 4) {
+										html = `<div>收货单签收/采购数量修改</div>`
+									} else if (value == 5) {
+										html = `<div>收货单新增物流信息</div>`
+									} else if (value == 6) {
+										html = `<div>收货单修改物流信息</div>`
+									} else if (value == 7) {
+										html = `<div>收货单删除</div>`
+									} else if (value == 8) {
+										html = `<div>收货单物流信息删除</div>`
+									} else if (value == 9) {
+										html = `<div>收货单sku上架</div>`
+									} else if (value == 10) {
+										html = `<div>批量导入物流信息</div>`
+									} else if (value == 11) {
+										html = `<div>修改备注信息</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'event_name',
+								title: '事件名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 导出收货单日志
+				receiptLogExport: function (index) {
+					var obj = receipt.data.receiptList[index]
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/receipt/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'batchNumber'}).val(obj.batch_number))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 删除收货单
+				deleteReceipt: function (batchNumber) {
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							requestServer('/api/batchreceipt/' + batchNumber, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#receiptList').datagrid("reload"); // 获取收货单列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+							}).catch((error) => {
+								console.log(error)
+							})
+						}
+					})
+				},
+
+				// 单个收货弹框
+				receiptProductDialog: function (index, indexs) {
+					var obj = receipt.data.receiptList[index].batch_receipt_details[indexs]
+					html = `<div class="table-merge">
+									<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${indexs})" src="${obj.productSkuImage}" /></div>
+									<div>${obj.productSkuBarcode}</div>
+									<div><span>${obj.productSkuName}</span> - <span>${obj.productName}</span></div>
+									<div>${obj.shelveQuantity}/${obj.originalQuantity}</div>
+									<div>
+										<input type="hidden" name="storehouseId" value="${obj.storehouseId}">
+										<input type="hidden" name="batchNumber" value="${obj.batchNumber}">
+										<input type="hidden" name="productSkuBarcode" value="${obj.productSkuBarcode}">`
+					if (obj.shelveQuantity != obj.originalQuantity) {
+						html += `<input type="number" name="quantity" id="receiptSingle" value="${obj.originalQuantity - obj.shelveQuantity}" onchange="receipt.methods.shelveManual(${indexs})" class="form-input" style="width: 50px;" />`
+					}
+					html += `</div>
+								</div>`
+
+					$('#receiptProduct').html(html)
+					$('#receiptProductDialog').dialog('open')
+					receipt.data.receiptIndex = index
+				},
+
+				// 手动收货数量
+				shelveManual: function (indexs) {
+					var index = receipt.data.receiptIndex // 当前操作的收货单下标
+					var obj = receipt.data.receiptList[index].batch_receipt_details[indexs]
+					var number = $('#receiptSingle').val() // 输入的值
+					var canQuantity = obj.originalQuantity - obj.shelveQuantity // 当前收货可收数量
+					if (number > 0) {
+						if (number > canQuantity) {
+							$('#receiptSingle').val(parseInt(canQuantity))
+						}
+					} else {
+						$('#receiptSingle').val(0)
+						message('error', '数量不能小于0')
+					}
+				},
+
+				// 收货
+				receiptProduct: function () {
+					var paramList = []
+
+					$('#receiptProduct').find('.table-merge').each(function () {
+						var storehouseId = $(this).find('input[name="storehouseId"]').val()
+						var batchNumber = $(this).find('input[name="batchNumber"]').val()
+						var productSkuBarcode = $(this).find('input[name="productSkuBarcode"]').val()
+						var quantity = $(this).find('input[name="quantity"]').val()
+						if (quantity > 0) {
+							paramList.push({
+								storehouseId: storehouseId,
+								batchNumber: batchNumber,
+								productSkuBarcode: productSkuBarcode,
+								quantity: quantity
+							})
+						}
+					})
+
+					if (paramList.length > 0) {
+						$('#receiptProductBtn').children().eq(1).addClass('grey')
+						$('#receiptProductBtn').children().eq(1).attr('disabled', true)
+						showLoading()
+						requestServer('/batchreceipt/shelves', 'POST', paramList).then((response) => {
+							if (response.code == 1) {
+								message('success', '收货成功')
+								$('#receiptProductDialog').dialog('close')
+								$('#receiptList').datagrid("reload"); // 收货单商品信息列表
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							$('#receiptProductBtn').children().eq(1).removeClass('grey')
+							$('#receiptProductBtn').children().eq(1).attr('disabled', false)
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '收货数量不能为空')
+					}
+				},
+
+				// 打印
+				printBarCodeDialog: function (index, indexs) {
+					var obj = JSON.parse(JSON.stringify(receipt.data.receiptList[index].batch_receipt_details[indexs]))
+					// 只打印一张
+					obj.originalQuantity = 1
+					obj.shelveQuantity = 0
+					printProductTag(obj)
+				},
+
+				// 批量收货弹框
+				receiptProductAllDialog: function (index) {
+					var list = receipt.data.receiptList[index].batch_receipt_details
+					var html = ''
+					for (const i in list) {
+						html += `<div class="table-merge">
+									<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${list[i].productSkuImage}" /></div>
+									<div>${list[i].productSkuBarcode}</div>
+									<div><span>${list[i].productSkuName}</span> - <span>${list[i].productName}</span></div>
+									<div>${list[i].shelveQuantity}/${list[i].originalQuantity}</div>
+									<div>
+										<input type="hidden" name="storehouseId" value="${list[i].storehouseId}">
+										<input type="hidden" name="batchNumber" value="${list[i].batchNumber}">
+										<input type="hidden" name="productSkuBarcode" value="${list[i].productSkuBarcode}">`
+						if (list[i].shelveQuantity != list[i].originalQuantity) {
+							html += `<input type="number" name="quantity" id="receipt_${i}" value="${list[i].originalQuantity - list[i].shelveQuantity}" onchange="receipt.methods.shelveManualAll(${i})" class="form-input" style="width: 50px;" />`
+						}
+						html += `</div>
+								</div>`
+					}
+					$('#receiptProductAllList').html(html)
+					var already = 0 // 已收数
+					var not = 0 // 未收数
+					var total = 0 // 总数
+					for (const i in list) {
+						already += list[i].shelveQuantity
+						not += list[i].originalQuantity - list[i].shelveQuantity
+						total += list[i].originalQuantity
+					}
+					$('#receiptProductAllDialog').dialog({title: `批量收货&nbsp;&nbsp;&nbsp;&nbsp;sku个数：${list.length}&nbsp;&nbsp;&nbsp;&nbsp;已收数：${already}&nbsp;&nbsp;&nbsp;&nbsp;未收数：${not}&nbsp;&nbsp;&nbsp;&nbsp;总数：${total}`})
+					$('#receiptProductAllDialog').dialog('open')
+					receipt.data.receiptIndex = index
+				},
+
+				// 手动收货数量（批量）
+				shelveManualAll: function (indexs) {
+					var index = receipt.data.receiptIndex // 当前操作的收货单下标
+					var obj = receipt.data.receiptList[index].batch_receipt_details[indexs]
+					var number = $('#receipt_' + indexs).val() // 输入的值
+					var canQuantity = obj.originalQuantity - obj.shelveQuantity // 当前收货可收数量
+					if (number > 0) {
+						if (number > canQuantity) {
+							$('#receipt_' + indexs).val(parseInt(canQuantity))
+						}
+					} else {
+						$('#receipt_' + indexs).val(0)
+						message('error', '数量不能小于0')
+					}
+				},
+
+				// 批量收货
+				receiptProductAll: function () {
+					var paramList = []
+
+					$('#receiptProductAllList').find('.table-merge').each(function () {
+						var storehouseId = $(this).find('input[name="storehouseId"]').val()
+						var batchNumber = $(this).find('input[name="batchNumber"]').val()
+						var productSkuBarcode = $(this).find('input[name="productSkuBarcode"]').val()
+						var quantity = $(this).find('input[name="quantity"]').val()
+						if (quantity > 0) {
+							paramList.push({
+								storehouseId: storehouseId,
+								batchNumber: batchNumber,
+								productSkuBarcode: productSkuBarcode,
+								quantity: quantity
+							})
+						}
+					})
+
+					if (paramList.length > 0) {
+						$('#receiptProductAllBtn').children().eq(1).addClass('grey')
+						$('#receiptProductAllBtn').children().eq(1).attr('disabled', true)
+						showLoading()
+						requestServer('/batchreceipt/shelves', 'POST', paramList).then((response) => {
+							if (response.code == 1) {
+								message('success', '收货成功')
+								$('#receiptProductAllDialog').dialog('close')
+								$('#receiptList').datagrid("reload") // 收货单商品信息列表
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							$('#receiptProductAllBtn').children().eq(1).removeClass('grey')
+							$('#receiptProductAllBtn').children().eq(1).attr('disabled', false)
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '收货数量不能为空')
+					}
+				},
+
+				// 批量打印弹框
+				printBarCodeAllDialog: function (index) {
+					var list = receipt.data.receiptList[index].batch_receipt_details
+					var html = ''
+					for (const i in list) {
+						html += `<div class="table-merge">
+									<div><img class="table-colums-img" onclick="receipt.methods.bigImg(${index}, ${i})" src="${list[i].productSkuImage}" /></div>
+									<div>${list[i].productSkuBarcode}</div>
+									<div><span>${list[i].productSkuName}</span> - <span>${list[i].productName}</span></div>
+									<div>${list[i].shelveQuantity}/${list[i].originalQuantity}</div>
+									<div>
+										<input type="number" name="printNumber" id="print_${i}" value="${list[i].originalQuantity - list[i].shelveQuantity}" onchange="receipt.methods.printManualAll(${i})" class="form-input" style="width: 50px;" />
+									</div>
+								</div>`
+					}
+					$('#printBarCodeAllList').html(html)
+					$('#printBarCodeAllDialog').dialog('open')
+					receipt.data.receiptIndex = index
+				},
+
+				// 手动打印数量（批量）
+				printManualAll: function (indexs) {
+					var index = receipt.data.receiptIndex // 当前操作的收货单下标
+					var obj = receipt.data.receiptList[index].batch_receipt_details[indexs]
+					var number = $('#print_' + indexs).val() // 输入的值
+					var canQuantity = obj.originalQuantity // 采购数量
+					if (number > 0) {
+						if (number > canQuantity) {
+							$('#print_' + indexs).val(parseInt(canQuantity))
+						}
+					} else {
+						$('#print_' + indexs).val(0)
+					}
+				},
+
+				// 批量打印
+				printBarCodeAll: function () {
+					var index = receipt.data.receiptIndex
+					var list = []
+
+					$('#printBarCodeAllList').find('.table-merge').each(function (indexs) {
+						var printNumber = $(this).find('input[name="printNumber"]').val()
+						if (printNumber > 0) {
+							var obj = JSON.parse(JSON.stringify(receipt.data.receiptList[index].batch_receipt_details[indexs]))
+							obj.originalQuantity = parseInt(printNumber)
+							obj.shelveQuantity = 0
+							list.push(obj)
+						}
+					})
+					printAllProductTag(list)
+					$('#printBarCodeAllDialog').dialog('close')
+				},
+
+				// 查看大图
+				bigImg: function (index, indexs) {
+					var obj = receipt.data.receiptList[index].batch_receipt_details[indexs]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#receiptImg').attr('src', obj.productSkuImage)
+					$('#receiptImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（收货单日志）
+				bigImg1: function (index) {
+					var obj = receipt.data.receiptLogList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.product_sku_barcode}</div>
+									<div>${obj.product_name}</div>
+									<div>${obj.product_sku_name}</div>
+								</div>`
+					$('#receiptImg').attr('src', obj.product_sku_image)
+					$('#receiptImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（扫描收货）
+				bigImg2: function (index) {
+					var obj = receipt.data.sweepSkuList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#receiptImg').attr('src', obj.productSkuImage)
+					$('#receiptImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				receipt.methods.initSearch() // 初始化条件查询
+				receipt.methods.getReceiptCount() // 获取收货统计数据
+				receipt.methods.monitorScan() // 监听扫描收货单号事件
+				receipt.methods.skuScan() // 监听扫描条形码事件
+			}
+		}
+
+		// 初始化
+		$(function () {
+			receipt.init()
+		})
+	</script>
+</body>
+
+</html>

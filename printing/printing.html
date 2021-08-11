@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>打印</title>
+</head>
+
+<body>
+	<div class="super-theme-example print-head">
+		<div>
+			<!-- <input id="storehouseId" class="easyui-combobox" prompt="仓库"> -->
+			<input id="type" class="easyui-combobox" prompt="类型">
+			<button class="btn-34 info" onclick="print.methods.searchPrintList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--打印列表-->
+	<div class="panel-block">
+		<table id="printList" style="width: 100%"></table>
+	</div>
+
+	<!--打印明细框（条形码）-->
+	<div id="printSkuDialog" class="easyui-dialog" title="打印明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#printSkuBtn',modal: true,closed: true">
+		<table id="printSkuList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="printSkuBtn">
+		<button class="btn large" onclick="$('#printSkuDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--打印明细框-->
+	<div id="printDetailsDialog" class="easyui-dialog" title="打印明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#printDetailsBtn',modal: true,closed: true">
+		<pre id="printDetailsList" style="width: 100%"></pre>
+	</div>
+	<div id="printDetailsBtn">
+		<button class="btn large" onclick="$('#printDetailsDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var print = {
+			data: {
+				printList: [] // 打印列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 打印类型
+					$('.print-head #type').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '打印类型'
+						}, {
+							id: 1,
+							text: '面单'
+						}, {
+							id: 3,
+							text: '拣货拨次单'
+						}, {
+							id: 4,
+							text: '拣货拨次单 + 面单'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					print.methods.getPrintList() // 获取打印列表
+				},
+
+				// 查询
+				searchPrintList: function () {
+					print.methods.getPrintList() // 获取打印列表
+				},
+
+				// 获取打印列表
+				getPrintList: function () {
+					$('#printList').height($(window).height() - $('.print-head').height() - 210)
+					$('#printList').datagrid({
+						method: 'GET',
+						url: host() + '/print/lists',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							type: $('.print-head #type').val() // 类型
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							print.data.printList = data.datas.content
+							$('#printList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'type',
+								title: '类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div>面单</div>`
+									} else if (value == 3) {
+										html = `<div>拣货拨次单</div>`
+									} else if (value == 4) {
+										html = `<div>拣货拨次单 + 面单</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'code',
+								title: '摘要',
+								width: 100,
+								formatter: function (value, row, index) {
+									var list = JSON.parse(value)
+									var html = '<div class="table-colums-group">'
+									for (const i in list) {
+										html += `<div>${list[i]}</div>`
+									}
+									html += '</div>'
+									return html
+								}
+							}, {
+								field: 'createdBy',
+								title: '创建账号',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 220,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="btn info" onclick="print.methods.printDetails(${index})">明细</button>
+													<button data-value="PRINT_PRINT" class="btn success hide" onclick="print.methods.printData(${index})">打印</button>
+													<button data-value="PRINT_DELETE" class="btn error hide" onclick="print.methods.printDelete(${index})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 明细
+				printDetails: function (index) {
+					var obj = print.data.printList[index]
+					$('#printDetailsDialog').dialog('open')
+					$('#printDetailsList').html(JSON.stringify(JSON.parse(obj.datas), undefined, 4))
+				},
+
+				// 打印
+				printData: function (index) {
+					var obj = print.data.printList[index]
+					if (obj.type == 1) {
+						// 面单
+						printFaceSheetTagList(JSON.parse(obj.datas))
+					} else if (obj.type == 3) {
+						// 拣货拨次单
+						printWaveTag(JSON.parse(obj.datas)[0])
+					} else if (obj.type == 4) {
+						// 拣货拨次单 + 面单
+						printAll(JSON.parse(obj.datas)[0].waveCode, JSON.parse(obj.datas)[1].list)
+					}
+				},
+
+				// 删除
+				printDelete: function (index) {
+					var obj = print.data.printList[index]
+					var paramList = [obj.id]
+
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/print', 'DELETE', paramList).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									print.methods.searchPrintList() // 查询
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				print.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			print.init()
+		})
+	</script>
+</body>
+
+</html>

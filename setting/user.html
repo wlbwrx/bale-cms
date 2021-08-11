@@ -1,0 +1,363 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>用户</title>
+</head>
+
+<body>
+	<div class="super-theme-example user-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="USER_ADD" class="btn success hide" onclick="user.methods.addUserDialog()">添加用户</button>
+			</div>
+		</div>
+	</div>
+
+	<!--用户列表-->
+	<div class="panel-block">
+		<table id="userList" style="width: 100%"></table>
+    </div>
+
+    <!--添加用户弹框-->
+	<div id="addUserDialog" class="easyui-dialog" title="添加用户" style="width: 400px;height: 320px" data-options="buttons: '#addUserBtn',modal: true,closed: true">
+        <div class="form-dialog" id="addUserForm">
+            <div class="form-item">
+                <label class="label-top">名称 *：</label>
+                <input type="text" name="username" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="label-top">密码 *：</label>
+                <input type="password" name="password" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="label-top">角色 *：</label>
+                <input id="addCharacterTypeList" class="easyui-combobox" prompt="角色">
+            </div>
+        </div>
+    </div>
+    <div id="addUserBtn">
+		<button class="btn large" onclick="$('#addUserDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="user.methods.addUser()">添加</button>
+    </div>
+
+    <!--编辑用户弹框-->
+	<div id="editUserDialog" class="easyui-dialog" title="编辑用户" style="width: 400px;height: 280px" data-options="buttons: '#editUserBtn',modal: true,closed: true">
+        <div class="form-dialog" id="editUserForm">
+            <!--用户ID-->
+			<input type="hidden" name="id">
+            <div class="form-item">
+                <label class="label-top">名称 *：</label>
+                <input type="text" name="username" class="form-input">
+            </div>
+            <div class="form-item">
+                <label class="label-top">角色 *：</label>
+                <input id="editCharacterTypeList" class="easyui-combobox" prompt="角色">
+            </div>
+        </div>
+    </div>
+    <div id="editUserBtn">
+		<button class="btn large" onclick="$('#editUserDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="user.methods.editUser()">修改</button>
+    </div>
+
+	<script type="text/javascript">
+		var user = {
+			data: {
+                characterList: [], // 角色列表
+                userList: [] // 用户列表
+			},
+			methods: {
+                // 获取角色列表
+                getCharacterList: function () {
+                    requestJsonServer('/uaa/role', 'GET').then((response) => {
+						if (response.code == 1) {
+                            user.data.characterList = response.datas // 角色列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                },
+
+				// 获取用户列表
+				getUserList: function () {
+					$('#userList').height($(window).height() - $('.user-head').height() - 180)
+					$('#userList').datagrid({
+						method: 'GET',
+						url: host() + '/uaa/user/lists',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							user.data.userList = data.datas.content
+							$('#userList').datagrid('scrollTo', 0)
+							return {
+                                total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'username',
+								title: '名称',
+								width: 100
+							}, {
+								field: 'roleNames',
+								title: '角色',
+								width: 100,
+								formatter: function (value, row, index) {
+									var list = value.split(',')
+									var html = ''
+									for (const i in list) {
+										html += `<span class="role-span">${list[i]}</span>`
+									}
+									return html
+								}
+							}, {
+                                field: 'createdAt',
+                                title: '创建时间',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    var html = `<div>${timeFormat(value)}</div>`
+                                    return html
+                                }
+                            }, {
+								field: 'index',
+								title: '操作',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (row.username != 'admin') {
+										html = `<div class="table-btn-group">
+													<button data-value="USER_EDIT" class="btn info hide" onclick="user.methods.editUserDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+													<button data-value="USER_RESETPASS" class="btn warning hide" onclick="user.methods.resetUserPass(${row.id})">重置密码</button>
+													<button data-value="USER_DELETE" class="btn error hide" onclick="user.methods.deleteUser(${row.id})">删除</button>
+												</div>`
+									} else {
+										html = `<span style="height: 41px;display: inline-block;"></span>`
+									}
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+
+                // 添加用户弹框
+                addUserDialog: function () {
+                    $('#addUserDialog').dialog('open')
+                    $('#addUserForm #addCharacterTypeList').combobox({
+                        editable: false, // 禁止输入
+						valueField: 'id',
+                        textField: 'name',
+                        multiple: true, // 多选
+                        data: user.data.characterList,
+						onSelect: function (rec) {
+
+						}
+					})
+                },
+
+                // 添加用户
+                addUser: function () {
+                    var parame = getParams('#addUserForm')
+                    var obj = $('#addCharacterTypeList').combobox('getValues')
+                    var list = [] // 已选中的角色
+                    if (!parame.username) {
+						message('error', '用户名称不能为空')
+						return false
+                    }
+                    if (!parame.password) {
+						message('error', '用户密码不能为空')
+						return false
+                    }
+                    if (obj.length == 0) {
+                        message('error', '用户角色不能为空')
+						return false
+                    }
+                    for (const i in obj) {
+                        list.push({
+                            id: obj[i]
+                        })
+                    }
+					parame.roles = list
+					showLoading()
+                    requestServer('/uaa/user', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '添加成功')
+                            $('#addUserForm').form('clear')
+							$('#addUserDialog').dialog('close')
+							$('#userList').datagrid("reload"); // 获取用户列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                },
+
+                // 删除用户
+                deleteUser: function (id) {
+                    $.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/uaa/user/' + id, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+                                    $('#userList').datagrid("reload"); // 获取用户列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+                },
+
+                // 编辑用户弹框
+                editUserDialog: function (row) {
+                    $('#editUserDialog').dialog('open')
+                    $('#editUserForm #editCharacterTypeList').combobox({
+                        editable: false, // 禁止输入
+						valueField: 'id',
+                        textField: 'name',
+                        multiple: true, // 多选
+                        data: user.data.characterList,
+						onSelect: function (rec) {
+
+						}
+                    })
+                    $('#editUserForm').find("input[name='id']").val(row.id)
+                    $('#editUserForm').find("input[name='username']").val(row.username)
+
+                    requestJsonServer('/uaa/user/' + row.id, 'GET').then((response) => {
+						if (response.code == 1) {
+                            user.methods.writeBackCharacter(response.datas.roles) // 回写用户角色
+                        } else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                },
+
+                // 回写用户角色
+                writeBackCharacter: function (data) {
+                    $(data).each(function (index, item) {
+                        $('#editUserForm #editCharacterTypeList').combobox('select', item.id)
+                    })
+                },
+
+                // 编辑用户
+                editUser: function () {
+                    var parame = getParams('#editUserForm')
+                    var obj = $('#editCharacterTypeList').combobox('getValues')
+                    var list = [] // 已选中的角色
+                    if (!parame.username) {
+						message('error', '用户名称不能为空')
+						return false
+                    }
+                    if (obj.length == 0) {
+                        message('error', '用户角色不能为空')
+						return false
+                    }
+                    for (const i in obj) {
+                        list.push({
+                            id: obj[i]
+                        })
+                    }
+					parame.roles = list
+					showLoading()
+                    requestServer('/uaa/user', 'PUT', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+                            $('#editUserForm').form('clear')
+							$('#editUserDialog').dialog('close')
+							$('#userList').datagrid("reload"); // 获取用户列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                },
+
+                // 重置密码
+                resetUserPass: function (id) {
+                    $.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/uaa/user/crypto/reset/' + id, 'PUT', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '已重置密码为123456')
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+                }
+			},
+			events: {
+
+			},
+			init: function () {
+                checkLogin() // 判断当前是否登录
+                user.methods.getCharacterList() // 获取角色列表
+				user.methods.getUserList() // 获取用户列表
+			}
+		}
+
+		// 初始化
+		$(function () {
+			user.init()
+		})
+	</script>
+</body>
+
+</html>

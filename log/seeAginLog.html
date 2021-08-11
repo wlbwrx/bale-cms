@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>复核统计</title>
+</head>
+
+<body>
+	<div class="super-theme-example seeaginlog-head">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="seeaginTime" class="form-date" placeholder="选择时间">
+			<input id="seeaginNumber" class="easyui-textbox" prompt="操作账号">
+			<input id="seeaginStatus" class="easyui-combobox" prompt="复核状态">
+			<button class="btn-34 info" onclick="seeAginLog.methods.searchSeeaginLogList()"><i class="fa fa-search"></i></button>
+			<span class="receipt-all-number" style="color:#333;margin-left:30px;text-align:center;">
+				已复核:<span id="seeAginNum" style="color:#57c5f7;"> 0 </span>单   &nbsp;&nbsp;&nbsp;&nbsp;            
+				sku数量:<span id="seeAginSku" style="color:#57c5f7;"> 0 </span>个  &nbsp;&nbsp;&nbsp;&nbsp;
+				sku总数:<span id="seeAginSkuNum" style="color:#57c5f7;"> 0 </span>个  &nbsp;&nbsp;&nbsp;&nbsp;      
+			</span>
+		</div>
+	</div>
+
+	<!--复核统计列表-->
+	<div class="panel-block picking-block">
+		<table id="seeAginLogList" style="width: 100%"></table>
+	</div>
+
+	<script type="text/javascript">
+		var seeAginLog = {
+			data: {
+				seeAginLogList: [] // 复核统计列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.seeaginlog-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 时间范围
+					$('#seeaginTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					})
+					// $('#seeaginTime').val('') // 清空选择时间信息
+
+					// 复核状态
+					$('#seeaginStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '复核状态'
+						}, {
+							id: 50,
+							text: '已复核'
+						}, {
+							id: 40 ,
+							text: '待复核'
+						}],
+						onSelect: function (rec) {
+							
+						}
+					})
+
+					seeAginLog.methods.getSeeaginLogList() //  获取复核统计列表
+					seeAginLog.methods.todayDataShow() // 今日数据展示
+				},
+
+				// 查询
+				searchSeeaginLogList: function () {
+					let seeaginTime = $('#seeaginTime').val() // 获取创建时间
+					if(seeaginTime == ''){
+						$.messager.alert('提醒', '请选择时间');  
+						return false
+					}
+					seeAginLog.methods.getSeeaginLogList() //  获取复核统计列表
+					seeAginLog.methods.todayDataShow() // 今日数据展示
+					$('#seeAginLogList').datagrid('scrollTo', 0)
+				},
+
+				// 今日数据展示
+				todayDataShow: function () {
+					let seeaginTime = $('#seeaginTime').val() // 获取创建时间
+					requestJsonServer('/report/invocie/check/count', 'get', {
+						storehouseId: $('.seeaginlog-head #storehouseId').val(), // 仓库
+						updatedBegainTime: timestamp(seeaginTime.substring(0, 16)), // 创建开始时间
+						updatedEndTime: timestamp(seeaginTime.substring(19, 35)), // 创建结束时间
+						waveStatus: $('#seeaginStatus').val(), // 复核状态
+						createdBy: $('#seeaginNumber').val() // 操作账号
+					}).then(res => {
+						const resultData = res.datas
+						$('#seeAginNum').text(resultData.invoiceCount != null ? resultData.invoiceCount : 0) // 今日已复核
+						$('#seeAginSku').text(resultData.skuCount ? resultData.skuCount : 0) // sku数量
+						$('#seeAginSkuNum').text(resultData.skuSum ? resultData.skuSum : 0) // sku总数
+					}).catch(error => { 
+
+					})
+				}, 
+
+				// 获取复核统计列表
+				getSeeaginLogList: function () {
+					var time = $('#seeaginTime').val() // 获取创建时间
+					$('#seeAginLogList').height($(window).height() - $('.seeaginlog-head').height() - 170)
+					$('#seeAginLogList').datagrid({
+						method: 'GET',
+						url: host() + '/report/wave/check/list', // 复核统计列表接口
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.seeaginlog-head #storehouseId').val(), // 仓库
+							updatedBegainTime: timestamp(time.substring(0, 16)), // 创建开始时间
+							updatedEndTime: timestamp(time.substring(19, 35)), // 创建结束时间
+							waveStatus: $('#seeaginStatus').val(), // 复核状态
+							updatedBy: $('#seeaginNumber').val() // 操作账号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							seeAginLog.data.seeAginLogList = data.datas.content
+							$('#seeAginLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'invoiceCode',
+								title: '发货单号',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'pickCode',
+								title: '物流单号',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'skuCount',
+								title: 'sku数量',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'skuSum',
+								title: 'sku总数',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'createdBy',
+								title: '操作账号',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'invoiceStatus',
+								title: '复核状态',
+								width:100,
+								formatter: function (value, row, index) {
+									if (value == 40) {
+										return `<div style="color:#f50;">待复核</div>`
+									} else if (value == 50) {
+										return `<div style="color:#0c6;">已复核</div>`
+									} else {
+										return `<div style="color:#ccc;">未知状态</div>`
+									}
+								}
+							}, {
+								field: 'updatedTime',
+								title: '更新时间',
+								width:100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? timeFormat(value) : '--'}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				seeAginLog.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			seeAginLog.init()
+		})
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,83 @@
+.pickNum,.pickNum2{
+    padding: 7px 0;border-bottom: 1px solid #ccc;
+}
+.pickNum:last-child,.pickNum2:last-child{
+    border-bottom:0;
+}
+.pickNum2{
+    text-align:center;
+}
+.pickNumSpan{
+    margin-right:5px;
+    width: 100px
+}
+.rImg{
+    width:50px;height:50px;margin:5px;
+}
+.btnRe{
+    width:100%;height:40px;line-height: 40px;display:block;
+    background:#39f;color:#fff;margin:5px 0;outline: none;
+    text-align: center;
+}
+.hidePick{
+    display:none;
+}
+#newInvoiceBar .progressbar{
+    border-color:#eee;
+}
+#persert_0,#persert_1,#persert_2,#persert_3,#persert_4{
+    width:100%;height:50px;margin-top:30px;
+}
+#persert_0 .progressbar-value .progressbar-text{
+    background:rgba(255, 0, 0, 0.658823529411765);
+}
+#persert_1 .progressbar-value .progressbar-text{
+    background:rgba(255, 0, 0, 0.427450980392157);
+}
+#persert_2 .progressbar-value .progressbar-text{
+    background:rgba(0, 204, 153, 1);
+}
+#persert_3 .progressbar-value .progressbar-text{
+    background:rgba(102, 204, 255, 1);
+}
+#persert_4 .progressbar-value .progressbar-text{
+    background:rgba(0, 204, 255, 0.356862745098039);
+}
+.pickNum_box{
+    border-bottom:1px solid #ccc;
+}
+.pickNum_box:last-child{
+    border-bottom:0;
+}
+.pickNum_div{
+    display:flex;
+    display:-webkit-flex;   
+    height:100%;
+}
+.pickNum_div span{
+    flex:1;
+    text-align:center;
+    padding:7px 0;
+    border-right:1px solid #ccc;
+    height:100%;
+}
+.pickNum_div span:last-child{
+    border-right:0;
+}
+
+/* 单独处理 配货和拣货的 样式 */
+.picking-block .datagrid-body td[field="invoiceList"],
+.pickpro-block .datagrid-body td[field="invoiceList"],
+.picking-block .datagrid-header td[field="invoiceList"],
+.pickpro-block .datagrid-header td[field="invoiceList"],
+.picking-block .datagrid-body td[field="invoiceList"] .datagrid-cell,
+.pickpro-block .datagrid-body td[field="invoiceList"] .datagrid-cell,
+.picking-block .datagrid-header td[field="invoiceList"] .datagrid-cell,
+.pickpro-block .datagrid-header td[field="invoiceList"] .datagrid-cell{
+    padding:0;
+    height:100%;
+}
+/* 新进度条颜色 */
+.progressbar-value .progressbar-text{
+    color:#000000;
+}

@@ -1,0 +1,882 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>库存</title>
+</head>
+
+<body>
+	<div class="super-theme-example instock-head">
+		<div class="super-theme-btn">
+			<div class="see-head">
+				<button class="btn success" onclick="inStock.methods.seeInventory()">查看统计</button>
+			</div>
+			<div class="download-head">
+				<button data-value="STOCK_SYNCHRONIZE" class="btn warning hide" onclick="inStock.methods.batchInventorySynchronize()">批量同步库位库存</button>
+			</div>
+			<div class="download-head">
+				<button data-value="STOCK_EXPORT" class="btn success hide" onclick="inStock.methods.inventoryAllExport()">导出库存</button>
+			</div>
+			<div class="download-head">
+				<button data-value="STOCK_EXPORT" class="btn success hide" onclick="inStock.methods.shelfAllLogExport()">导出库位日志</button>
+			</div>
+			<div class="download-head">
+				<button data-value="STOCK_EXPORT" class="btn success hide" onclick="inStock.methods.inventoryAllLogExport()">导出库存日志</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="productId" class="easyui-textbox" prompt="商品ID">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<input id="productSkuName" class="easyui-textbox" prompt="规格名称">
+			<!-- <input id="region" class="easyui-textbox" prompt="库位"> -->
+			<button class="btn-34 info" onclick="inStock.methods.searchInStockList()"><i class="fa fa-search"></i></button>
+		</div>
+    </div>
+
+	<!--库存列表-->
+	<div class="panel-block">
+		<table id="inStockList" style="width: 100%"></table>
+	</div>
+
+	<!--查看统计-->
+	<div id="seeInventoryDialog" class="easyui-dialog" title="查看统计" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#seeInventoryBtn',modal: true,closed: true">
+		<div>
+			<button class="btn success" onclick="inStock.methods.seeInventory()">刷新</button>
+		</div>
+		<div id="seeInventory" class="panel-log" style="width: 100%;margin-top: 20px;"></div>
+	</div>
+	<div id="seeInventoryBtn">
+		<button class="btn large" onclick="$('#seeInventoryDialog').dialog('close')">关闭</button>
+	</div>
+	
+	<!--查看存放的库位弹框-->
+	<div id="inStockDetailsDialog" class="easyui-dialog" title="查看存放的库位" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#inStockDetailsBtn',modal: true,closed: true">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="LOCATOR_LOCK" class="btn error hide" onclick="inStock.methods.lockLocatorAll()">一键锁库</button>
+			</div>
+			<div class="download-head">
+				<button data-value="LOCATOR_LOCK" class="btn success hide" onclick="inStock.methods.unlockLocatorAll()">一键解锁</button>
+			</div>
+		</div>
+		<table id="inStockDetailsList" style="width: 100%;height: 520px"></table>
+    </div>
+    <div id="inStockDetailsBtn">
+		<button class="btn large" onclick="$('#inStockDetailsDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--库存日志弹框-->
+	<div id="inventoryLogDialog" class="easyui-dialog" title="库存日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#inventoryLogBtn',modal: true,closed: true">
+		<table id="inventoryLogLists" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="inventoryLogBtn">
+		<button class="btn large" onclick="$('#inventoryLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--库位日志弹框-->
+	<div id="locatorLogDialog_" class="easyui-dialog" title="库位日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#shelfLogBtn',modal: true,closed: true">
+		<table id="locatorLogList_" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="shelfLogBtn">
+		<button class="btn large" onclick="$('#locatorLogDialog_').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="inStockImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#inStockImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="inStockImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="inStockImgBtn">
+		<button class="btn large" onclick="$('#inStockImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var inStock = {
+			data: {
+				inStockList: [], // 库存列表
+				inStockDetailsList: [], // 存放的库位列表
+				inventoryLogList: [], // 库存日志列表
+				locatorLogList: [] // 库位日志列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.instock-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 监听条形码回车
+					$('.instock-head #productSkuBarcode').textbox({
+						inputEvents: $.extend({}, $.fn.textbox.defaults.inputEvents, {
+							keyup: function (event) {
+								if (event.keyCode == 13) {
+									inStock.methods.getInStockList('scrollTo') // 获取库存列表
+								}
+							}
+						})
+					})
+				},
+
+				// 查询
+				searchInStockList: function () {
+					inStock.methods.getInStockList('scrollTo') // 获取库存列表
+				},
+
+				// 获取库存列表
+				getInStockList: function (scrollTo) {
+                    $('#inStockList').height($(window).height() - $('.instock-head').height() - 200)
+					$('#inStockList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/inventory',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.instock-head #storehouseId').val(), // 仓库
+                            productId: $('.instock-head #productId').val(), // 商品ID
+                            productSkuBarcode: $('.instock-head #productSkuBarcode').val(), // 条形码
+                            productSkuName: $('.instock-head #productSkuName').val(), // 规格名称
+                            region: $('.instock-head #region').val() // 库位
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							inStock.data.inStockList = data.datas.content
+							if (scrollTo == 'scrollTo') {
+								$('#inStockList').datagrid('scrollTo', 0)
+							}
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						checkOnSelect: false, // 点击复选框才会选中
+						selectOnCheck: false, // 选中该行将不会选中复选框
+						columns: [
+							[{
+								field: 'checkbox',
+								checkbox: true
+							}, {
+								field: 'productId',
+								title: '商品ID',
+								width: 30,
+								formatter: function (value, row, index) {
+									return `<div class="table-center">${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="inStock.methods.bigImg(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'inventory',
+								title: '库存',
+								width: 100
+							}, {
+								field: 'shelfInventory',
+								title: '库位库存',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : 0}</div>`
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 180,
+								formatter: function (value, row, index) {
+									// <button data-value="STOCK_EXPORT" class="btn success hide" onclick="inStock.methods.inventoryLogExport(${index})">导出</button>
+									var html = `<div class="table-btn-group">
+													<button class="btn success" onclick="inStock.methods.printBarCodeDialog(${index})">打印条码</button>
+													<button class="btn info" onclick="inStock.methods.inStockDetailsDialog(${index})">查看库位</button>
+													<button class="btn success" onclick="inStock.methods.inventoryLogDialog(${index})">库存日志</button>
+													<button data-value="STOCK_SYNCHRONIZE" class="btn warning hide" onclick="inStock.methods.inventorySynchronize(${index})">同步库位库存</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							$('#inStockList').datagrid('clearChecked') // 清除所有勾选的行
+							// 分页时候滚动条置顶
+							$("#inStockList").datagrid("getPager").pagination({
+								onSelectPage: function (pageNumber, pageSize) {
+									$('#inStockList').datagrid({pageNumber: pageNumber})
+									$('#inStockList').datagrid("reload") // 获取库存列表
+									$('#inStockList').datagrid('scrollTo', 0)
+								}
+							})
+						}
+					})
+                },
+
+				// 查看统计
+				seeInventory: function () {
+					$('#seeInventoryDialog').dialog('open')
+					showLoading()
+					requestJsonServer('/storehouse/inventory/personalize', 'GET', {
+						storehouseId: $('.instock-head #storehouseId').val()
+					}).then((response) => {
+						if (response.code == 1) {
+							var html = `<div>
+											<span>sku总个数</span>
+											<span>${response.datas.productSkuBarcodeCount}</span>
+										</div>
+										<div>
+											<span>库存总数</span>
+											<span>${response.datas.countInventory}</span>
+										</div>
+										<div>
+											<span>库存数最多sku</span>
+											<span>${response.datas.productSkuBarcodeMax}</span>
+										</div>
+										<div>
+											<span>库存数最多sku库存</span>
+											<span>${response.datas.productSkuBarcodeMaxCount}</span>
+										</div>
+										<div>
+											<span>今日出库数量</span>
+											<span>${response.datas.outCount}</span>
+										</div>
+										<div>
+											<span>今日入库数量</span>
+											<span>${response.datas.inCount}</span>
+										</div>
+										<div>
+											<span>库存为0的sku总数</span>
+											<span>${response.datas.zeroSkuCount}</span>
+										</div>`
+							$('#seeInventory').html(html)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 批量同步库位库存
+				batchInventorySynchronize: function () {
+					var list = $('#inStockList').datagrid('getChecked')
+					var parameList = []
+					if (list.length) {
+						for (const i in list) {
+							parameList.push({
+								storehouseId: list[i].storehouseId,
+								productSkuBarcode: list[i].productSkuBarcode
+							})
+						}
+						$.messager.confirm('确认', '您确认要同步库位库存吗？', function (r) {
+							if (r) {
+								showLoading()
+								requestServer('/inventory/shelf/quantity/equals', 'POST', parameList).then((response) => {
+									if (response.code == 1) {
+										message('success', '同步成功')
+										$('#inStockList').datagrid('reload') // 获取库存列表
+									} else if (response.code == -1 || response.code == -3) {
+										loginOut()
+									} else {
+										message('error', response.message)
+									}
+									hideLoading()
+								}).catch((error) => {
+									hideLoading()
+								})
+							}
+						})
+					} else {
+						message('error', '请勾选要同步的sku')
+					}
+				},
+
+				// 导出库存（头部）
+				inventoryAllExport: function () {
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/storehouse/inventory/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.instock-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'productId'}).val($('.instock-head #productId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuBarcode'}).val($('.instock-head #productSkuBarcode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuName'}).val($('.instock-head #productSkuName').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 导出库位日志（头部）
+				shelfAllLogExport: function () {
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/storehouse/inventory/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.instock-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'productId'}).val($('.instock-head #productId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuBarcode'}).val($('.instock-head #productSkuBarcode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuName'}).val($('.instock-head #productSkuName').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 导出库存日志（头部）
+				inventoryAllLogExport: function () {
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/inventorylog/export'})
+					form.attr({'action': host() + '/storehouse/inventory/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.instock-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'productId'}).val($('.instock-head #productId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuBarcode'}).val($('.instock-head #productSkuBarcode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'productSkuName'}).val($('.instock-head #productSkuName').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 库存日志列表
+				inventoryLogDialog: function (index) {
+					var obj = inStock.data.inStockList[index]
+					$('#inventoryLogDialog').dialog('open')
+					$('#inventoryLogLists').datagrid({
+						method: 'GET',
+						url: host() + '/log/inventory',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							inventoryId: obj.id
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							inStock.data.inventoryLogList = data.datas.content // 库存日志列表
+							$('#inventoryLogLists').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'product_sku_image',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="inStock.methods.bigImg1(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'product_name',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'product_sku_name',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'event_name',
+								title: '事件',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'change_comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'before_inventory',
+								title: '变更前库存',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'after_inventory',
+								title: '变更后库存',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${row.after_inventory - row.before_inventory}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 同步库位库存
+				inventorySynchronize: function (index) {
+					var obj = inStock.data.inStockList[index]
+					$.messager.confirm('确认', '您确认要同步库位库存吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/inventory/shelf/quantity/equals', 'POST', [{
+								storehouseId: obj.storehouseId,
+								productSkuBarcode: obj.productSkuBarcode
+							}]).then((response) => {
+								if (response.code == 1) {
+									message('success', '同步成功')
+									$('#inStockList').datagrid('reload') // 获取库存列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+
+				// 导出库存日志
+				inventoryLogExport: function (index) {
+					var obj = inStock.data.inStockList[index]
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/inventorylog/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'inventoryShelfId'}).val(obj.id))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 打印
+				printBarCodeDialog: function (index) {
+					var obj = JSON.parse(JSON.stringify(inStock.data.inStockList[index]))
+					// 打印一张
+					obj.originalQuantity = 1
+					obj.shelveQuantity = 0
+					printProductTag(obj)
+				},
+
+                // 查看存放的库位
+                inStockDetailsDialog: function (index) {
+					var obj = inStock.data.inStockList[index]
+					$('#inStockDetailsDialog').dialog('open')
+					$('#inStockDetailsList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/inventory/details',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId, // 仓库
+							productSkuBarcode: obj.productSkuBarcode // 条形码
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							inStock.data.inStockDetailsList = data.datas[0].inventoryShelfs
+							return {
+								rows: data.datas[0].inventoryShelfs
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'shelf',
+								title: '库位',
+								width: 100
+							}, {
+                                field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+                            }, {
+                                field: 'quantity',
+								title: '存货',
+								width: 100
+                            }, {
+								field: 'locked',
+								title: '是否锁定',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div class="success-msg">未锁定</div>`
+									} else if (value == 2) {
+										html = `<div class="error-msg">已锁定</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													${timeFormat(value)}
+												</div>`
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 120,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="easyui-linkbutton success" name="shelfLog" onclick="inStock.methods.locatorLogDialog(${index})">库位日志</button>
+													<button class="easyui-linkbutton success hide" name="shelfLogExport" data-value="STOCK_EXPORT" onclick="inStock.methods.shelfLogExport(${index})">导出库位日志</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							$("button[name='shelfLog'], button[name='shelfLogExport']").linkbutton({
+								height: 26
+							})
+						}
+					})
+				},
+
+				// 一键锁库
+				lockLocatorAll: function () {
+					var list = inStock.data.inStockDetailsList
+					var parameList = []
+					if (list.length) {
+						for (const i in list) {
+							parameList.push({
+								storehouseId: list[i].storehouseId,
+								shelf: list[i].shelf,
+								locked: 2
+							})
+						}
+						showLoading()
+						requestServer('/inventory/shelflist/lock', 'POST', parameList).then((response) => {
+							if (response.code == 1) {
+								message('success', '锁库成功')
+								$('#inStockDetailsList').datagrid('reload') // 查看存放的库位
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '未找到库位')
+					}
+				},
+
+				// 一键解锁
+				unlockLocatorAll: function () {
+					var list = inStock.data.inStockDetailsList
+					var parameList = []
+					if (list.length) {
+						for (const i in list) {
+							parameList.push({
+								storehouseId: list[i].storehouseId,
+								shelf: list[i].shelf,
+								locked: 1
+							})
+						}
+						showLoading()
+						requestServer('/inventory/shelflist/lock', 'POST', parameList).then((response) => {
+							if (response.code == 1) {
+								message('success', '解锁成功')
+								$('#inStockDetailsList').datagrid('reload') // 查看存放的库位
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '未找到库位')
+					}
+				},
+
+				// 库位日志列表
+				locatorLogDialog: function (index) {
+					var obj = inStock.data.inStockDetailsList[index]
+					$('#locatorLogDialog_').dialog('open')
+					$('#locatorLogList_').datagrid({
+						method: 'GET',
+						url: host() + '/log/shelf',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							inventoryShelfId: obj.id
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							inStock.data.locatorLogList = data.datas.content // 库位日志列表
+							$('#locatorLogList_').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'change_type',
+								title: '类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="success-msg">上架</div>`
+									} else if (value == 20) {
+										html = `<div class="error-msg">下架</div>`
+									} else if (value == 30) {
+										html = `<div class="error-msg">移库</div>`
+									} else if (value == 40) {
+										html = `<div class="error-msg">盘点</div>`
+									} else if (value == 50) {
+										html = `<div class="error-msg">库位编辑</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'before_quantity',
+								title: '变更前库存',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'after_quantity',
+								title: '变更后库存',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${row.after_quantity - row.before_quantity}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'change_comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 导出库位日志
+				shelfLogExport: function (index) {
+					var obj = inStock.data.inStockDetailsList[index]
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/shelf/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val(obj.storehouseId))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'inventoryShelfId'}).val(obj.id))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 查看大图
+				bigImg: function (index) {
+					var obj = inStock.data.inStockList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#inStockImg').attr('src', obj.productSkuImage)
+					$('#inStockImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（库存日志）
+				bigImg1: function (index) {
+					var obj = inStock.data.inventoryLogList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.product_sku_barcode}</div>
+									<div>${obj.product_name}</div>
+									<div>${obj.product_sku_name}</div>
+								</div>`
+					$('#inStockImg').attr('src', obj.product_sku_image)
+					$('#inStockImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				inStock.methods.initSearch() // 初始化条件查询
+				inStock.methods.getInStockList() // 获取库存列表
+			}
+		} 
+
+		// 初始化
+		$(function () {
+			inStock.init()
+		})
+	</script>
+</body>
+
+</html>

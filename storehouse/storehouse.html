@@ -1,0 +1,388 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>仓库</title>
+</head>
+
+<body>
+	<div class="super-theme-example storehouse-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="STOREHOUSE_ADD" class="btn success hide" onclick="storehouse.methods.addStorehouseDialog()">添加仓库</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseName" class="easyui-textbox" prompt="仓库名称">
+			<button class="btn-34 info" onclick="storehouse.methods.searchStorehouseList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--仓库列表-->
+	<div class="panel-block">
+		<table id="storehouseList" style="width: 100%"></table>
+	</div>
+
+	<!--添加仓库弹框-->
+	<div id="addStorehouseDialog" class="easyui-dialog" title="添加仓库" style="width: 400px;height: 320px" data-options="buttons: '#addStorehouseBtn',modal: true,closed: true">
+		<div class="form-dialog" id="addStorehouseForm">
+			<div class="form-item">
+				<label class="label-top">仓库名称 *：</label>
+				<input type="text" name="storehouseName" class="form-input" prompt="请输入仓库名称">
+			</div>
+			<div class="form-item">
+				<label class="label-top">操作人：</label>
+				<input id="addStorehouseManage" class="easyui-combobox" prompt="操作人">
+			</div>
+			<div class="form-item">
+				<label class="label-top">备注：</label>
+				<input type="text" name="comments" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="addStorehouseBtn">
+		<button class="btn large" onclick="$('#addStorehouseDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="storehouse.methods.addStorehouse()">添加</button>
+	</div>
+
+	<!--编辑仓库弹框-->
+	<div id="editStorehouseDialog" class="easyui-dialog" title="编辑仓库" style="width: 400px;height: 320px" data-options="buttons: '#editStorehouseBtn',modal: true,closed: true">
+		<div class="form-dialog" id="editStorehouseForm">
+			<input type="text" name="id" hidden>
+			<div class="form-item">
+				<label class="label-top">仓库名称 *：</label>
+				<input type="text" name="storehouseName" class="form-input" prompt="请输入仓库名称">
+			</div>
+			<div class="form-item">
+				<label class="label-top">操作人：</label>
+				<input id="editStorehouseManage" class="easyui-combobox" prompt="操作人">
+			</div>
+			<div class="form-item">
+				<label class="label-top">备注：</label>
+				<input type="text" name="comments" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="editStorehouseBtn">
+		<button class="btn large" onclick="$('#editStorehouseDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="storehouse.methods.editStorehouse()">修改</button>
+	</div>
+
+	<!--编辑操作人弹框-->
+	<div id="editOperatorDialog" class="easyui-dialog" title="编辑操作人" style="width: 400px;height: 320px" data-options="buttons: '#editOperatorBtn',modal: true,closed: true">
+		<div class="form-dialog" id="editOperatorForm">
+			<input type="text" name="id" hidden>
+			<input type="text" name="storehouseName" hidden>
+			<input type="text" name="comments" hidden>
+			<div class="form-item label-textarea">
+				<label class="label-top">操作人 *：</label>
+				<textarea name="managers" class="form-textarea"></textarea>
+			</div>
+		</div>
+	</div>
+	<div id="editOperatorBtn">
+		<button class="btn large" onclick="$('#editOperatorDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="storehouse.methods.editOperator()">修改</button>
+	</div>
+
+	<script type="text/javascript">
+		var storehouse = {
+			data: {
+				userList: [], // 用户列表
+				storehouseList: [] // 仓库列表
+			},
+			methods: {
+				// 查询
+				searchStorehouseList: function () {
+					storehouse.methods.getStorehouseList() // 获取仓库列表
+				},
+
+				// 获取用户列表
+				getUserList: function () {
+					requestJsonServer('/uaa/user/lists', 'GET', {
+						page: 0,
+						size: 5000
+					}).then((response) => {
+						if (response.code == 1) {
+                            storehouse.data.userList = response.datas.content // 用户列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 获取仓库列表
+				getStorehouseList: function () {
+					$('#storehouseList').height($(window).height() - $('.storehouse-head').height() - 200)
+					$('#storehouseList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseName: $('.storehouse-head #storehouseName').val() // 仓库名称
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							storehouse.data.storehouseList = data.datas.content
+							$('#storehouseList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'id',
+								title: '仓库ID',
+								width: 50,
+								sortable: true
+							}, {
+								field: 'storehouseName',
+								title: '名称',
+								width: 100,
+								sortable: true
+							}, {
+								field: 'comments',
+								title: '备注',
+								width: 100
+							}, {
+								field: 'managers',
+								title: '操作人',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<div class="edit-operator" onclick="storehouse.methods.editOperatorDialog(${JSON.stringify(row).replace(/"/g,"'")})">${value}</div>
+												</div>`
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button data-value="STOREHOUSE_EDIT" class="btn info hide" onclick="storehouse.methods.editStoreHouseDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+													<button data-value="STOREHOUSE_DELETE" class="btn error hide" onclick="storehouse.methods.deleteStoreHouse(${row.id})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 添加仓库弹框
+				addStorehouseDialog: function () {
+					$('#addStorehouseDialog').dialog('open')
+                    $('#addStorehouseForm #addStorehouseManage').combobox({
+                        editable: false, // 禁止输入
+						valueField: 'username',
+                        textField: 'username',
+                        multiple: true, // 多选
+                        data: storehouse.data.userList,
+						onSelect: function (rec) {
+
+						}
+					})
+				},
+
+				// 添加仓库
+				addStorehouse: function () {
+					var parame = getParams('#addStorehouseForm')
+					var obj = $('#addStorehouseManage').combobox('getValues')
+					var list = '' // 已选中的用户
+					if (!parame.storehouseName) {
+						message('error', '仓库名称不能为空')
+						return false
+					}
+					if (obj) {
+						for (const i in obj) {
+							if (i == obj.length - 1) {
+								list += obj[i]
+							} else {
+								list += obj[i] + ','
+							}
+						}
+					}
+					parame.managers = list
+					showLoading()
+					requestServer('/storehouse', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '添加成功')
+							$('#addStorehouseForm').form('clear')
+							$('#addStorehouseDialog').dialog('close')
+							$('#storehouseList').datagrid("reload"); // 获取仓库列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 编辑仓库弹框
+				editStoreHouseDialog: function (row) {
+					$('#editStorehouseDialog').dialog('open')
+					$('#editStorehouseForm #editStorehouseManage').combobox({
+                        editable: false, // 禁止输入
+						valueField: 'username',
+                        textField: 'username',
+                        multiple: true, // 多选
+                        data: storehouse.data.userList,
+						onSelect: function (rec) {
+
+						}
+                    })
+					$('#editStorehouseForm').find("input[name='id']").val(row.id)
+					$('#editStorehouseForm').find("input[name='storehouseName']").val(row.storehouseName)
+					$('#editStorehouseForm').find("input[name='comments']").val(row.comments)
+
+					// 回写操作人
+					var managers = row.managers
+					if (managers) {
+						managers = managers.split(',')
+						for (const i in managers) {
+							$('#editStorehouseForm #editStorehouseManage').combobox('select', managers[i])
+						}
+					}
+				},
+
+				// 编辑仓库
+				editStorehouse: function () {
+					var parame = getParams('#editStorehouseForm')
+					var obj = $('#editStorehouseManage').combobox('getValues')
+					var list = '' // 已选中的用户
+					if (!parame.storehouseName) {
+						message('error', '仓库名称不能为空')
+						return false
+					}
+					if (obj) {
+						for (const i in obj) {
+							if (i == obj.length - 1) {
+								list += obj[i]
+							} else {
+								list += obj[i] + ','
+							}
+						}
+					}
+					parame.managers = list
+					showLoading()
+					requestServer('/storehouse', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+							$('#editStorehouseForm').form('clear')
+							$('#editStorehouseDialog').dialog('close')
+							$('#storehouseList').datagrid("reload"); // 获取仓库列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 编辑操作人弹框
+				editOperatorDialog: function (row) {
+					$('#editOperatorDialog').dialog('open')
+					$('#editOperatorForm').find("input[name='id']").val(row.id)
+					$('#editOperatorForm').find("input[name='storehouseName']").val(row.storehouseName)
+					$('#editOperatorForm').find("input[name='comments']").val(row.comments)
+
+					// 回写操作人
+					$('#editOperatorForm').find("textarea[name='managers']").val(row.managers)
+				},
+
+				// 编辑操作人
+				editOperator: function () {
+					var parame = getParams('#editOperatorForm')
+					showLoading()
+					requestServer('/storehouse', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+							$('#editOperatorForm').form('clear')
+							$('#editOperatorDialog').dialog('close')
+							$('#storehouseList').datagrid("reload"); // 获取仓库列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 删除仓库
+				deleteStoreHouse: function (id) {
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/storehouse/' + id, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#storehouseList').datagrid("reload"); // 获取仓库列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				storehouse.methods.getUserList() // 获取用户列表
+				storehouse.methods.getStorehouseList() // 获取仓库列表
+			}
+		}
+
+		// 初始化
+		$(function () {
+			storehouse.init()
+		})
+	</script>
+</body>
+
+</html>

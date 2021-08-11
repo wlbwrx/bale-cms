@@ -1,0 +1,404 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>角色</title>
+</head>
+
+<body>
+	<div class="super-theme-example character-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="CHARACTER_ADD" class="btn success hide" onclick="character.methods.addCharacterDialog()">添加角色</button>
+			</div>
+		</div>
+	</div>
+
+	<!--角色列表-->
+	<div class="panel-block">
+		<table id="characterList" style="width: 100%"></table>
+    </div>
+    
+    <!--添加角色弹框-->
+	<div id="addCharacterDialog" class="easyui-dialog" title="添加角色" style="width: 400px;height: 520px" data-options="buttons: '#addCharacterBtn',modal: true,closed: true">
+        <div class="form-dialog" id="addCharacterForm">
+            <div class="form-item">
+                <label class="label-top">名称 *：</label>
+				<input id="addCharacterName" name="name" class="easyui-combobox" prompt="名称">
+            </div>
+            <div class="form-item">
+                <label class="label-top">值 *：</label>
+                <input type="text" name="value" class="form-input" readonly>
+            </div>
+            <div class="form-item permission-block">
+                <label class="label-top">权限 *：</label>
+                <div class="permission-type-list">
+                    <ul id="addPermissionTypeList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="addCharacterBtn">
+		<button class="btn large" onclick="$('#addCharacterDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="character.methods.addCharacter()">添加</button>
+    </div>
+
+    <!--编辑角色弹框-->
+	<div id="editCharacterDialog" class="easyui-dialog" title="编辑角色" style="width: 400px;height: 520px" data-options="buttons: '#editCharacterBtn',modal: true,closed: true">
+        <div class="form-dialog" id="editCharacterForm">
+            <!--角色ID-->
+			<input type="hidden" name="id">
+            <div class="form-item">
+                <label class="label-top">名称 *：</label>
+				<input id="editCharacterName" name="name" class="easyui-combobox" prompt="名称">
+            </div>
+            <div class="form-item">
+                <label class="label-top">值 *：</label>
+                <input type="text" name="value" class="form-input" readonly>
+            </div>
+            <div class="form-item permission-block">
+                <label class="label-top">权限 *：</label>
+                <div class="permission-type-list">
+                    <ul id="editPermissionTypeList"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div id="editCharacterBtn">
+		<button class="btn large" onclick="$('#editCharacterDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="character.methods.editCharacter()">修改</button>
+    </div>
+
+	<script type="text/javascript">
+		var character = {
+			data: {
+                permissionTypeList: [], // 权限列表
+				characterList: [], // 角色列表
+				nameMap: {
+					admin: '管理',
+					batchrepeipt: '收货',
+					api: '对外API',
+					shelf: '上架',
+					invoice: '发货',
+					pick: '拣货',
+					report: '统计'
+				}
+			},
+			methods: {
+				// 初始化添加角色名称
+				initAddName: function () {
+					// 名称列表
+					var nameList = [
+						{value: 'admin',text: '管理'},
+						{value: 'batchrepeipt',text: '收货'},
+						{value: 'api',text: '对外API'},
+						{value: 'shelf',text: '上架'},
+						{value: 'invoice',text: '发货'},
+						{value: 'pick',text: '拣货'},
+						{value: 'report',text: '统计'}
+					]
+					$('#addCharacterForm #addCharacterName').combobox({
+						editable: false, // 禁止输入
+						valueField: 'value',
+						textField: 'text',
+						data: nameList,
+						onSelect: function (rec) {
+							$('#addCharacterForm').find("input[name='value']").val(rec.value)
+						}
+					})
+				},
+
+				// 初始化编辑角色名称
+				initEditName: function () {
+					// 名称列表
+					var nameList = [
+						{value: 'admin',text: '管理'},
+						{value: 'batchrepeipt',text: '收货'},
+						{value: 'api',text: '对外API'},
+						{value: 'shelf',text: '上架'},
+						{value: 'invoice',text: '发货'},
+						{value: 'pick',text: '拣货'},
+						{value: 'report',text: '统计'}
+					]
+					$('#editCharacterForm #editCharacterName').combobox({
+						editable: false, // 禁止输入
+						valueField: 'value',
+						textField: 'text',
+						data: nameList,
+						onSelect: function (rec) {
+							$('#editCharacterForm').find("input[name='value']").val(rec.value)
+						}
+					})
+				},
+
+                // 获取权限列表
+                getPermissionTypeList: function () {
+                    requestJsonServer('/uaa/authority', 'GET').then((response) => {
+						if (response.code == 1) {
+							// 转换成esayui树形表格的格式
+                            var json = JSON.stringify(response.datas).replace(/authorities/g, 'children').replace(/name/g, 'text')
+                            json = JSON.parse(json)
+                            var formatJson = character.methods.treeGridShow(json) // 处理数据格式
+                            character.data.permissionTypeList = formatJson // 权限列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                },
+
+                // 处理数据格式
+                treeGridShow: function (data) {
+                    $(data).each(function (index, item) {
+                        if (!item.children) {
+                            item.state = 'open'
+                        } else {
+                            item.state = 'closed'
+                            character.methods.treeGridShow(item.children)
+                        }
+                    })
+                    return data
+                },
+                
+				// 获取角色列表
+				getCharacterList: function () {
+					$('#characterList').height($(window).height() - $('.character-head').height() - 180)
+					$('#characterList').datagrid({
+						method: 'GET',
+						url: host() + '/uaa/role',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							character.data.characterList = data.datas
+							$('#characterList').datagrid('scrollTo', 0)
+							return {
+								rows: data.datas
+							}
+						},
+						pagination: false, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'name',
+								title: '名称',
+								width: 100
+							}, {
+								field: 'value',
+								title: '值',
+								width: 100
+							}, {
+                                field: 'updatedAt',
+                                title: '更新时间',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    var html = `<div>${timeFormat(value)}</div>`
+                                    return html
+                                }
+                            }, {
+								field: 'index',
+								title: '操作',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button data-value="CHARACTER_EDIT" class="btn info hide" onclick="character.methods.editCharacterDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+													<button data-value="CHARACTER_DELETE" class="btn error hide" onclick="character.methods.deleteCharacter(${row.id})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+                
+                // 添加角色弹框
+                addCharacterDialog: function () {
+                    $('#addCharacterDialog').dialog('open')
+					character.methods.initAddName() // 初始化添加角色名称
+					$('#addCharacterForm').find("input[name='value']").val('')
+                    $('#addPermissionTypeList').tree({
+                        data: character.data.permissionTypeList,
+                        checkbox: true // 显示复选框
+                    })
+                },
+                
+                // 添加角色
+                addCharacter: function () {
+                    var parame = getParams('#addCharacterForm')
+                    var obj = $('#addPermissionTypeList').tree('getChecked', ['checked', 'indeterminate'])
+                    var list = [] // 已选中的节点
+                    if (!parame.name) {
+						message('error', '角色名称不能为空')
+						return false
+                    } else {
+						parame.name = character.data.nameMap[parame.name]
+					}
+                    if (!parame.value) {
+						message('error', '角色值不能为空')
+						return false
+                    }
+                    for (const i in obj) {
+                        list.push({
+                            id: obj[i].id
+                        })
+                    }
+					parame.authorities = list
+					showLoading()
+                    requestServer('/uaa/role', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '添加成功')
+                            $('#addCharacterForm').form('clear')
+							$('#addCharacterDialog').dialog('close')
+							$('#characterList').datagrid("reload"); // 获取角色列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                },
+
+                // 删除角色
+                deleteCharacter: function (id) {
+                    $.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/uaa/role/' + id, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#characterList').datagrid("reload"); // 获取角色列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+                },
+
+                // 编辑角色弹框
+                editCharacterDialog: function (row) {
+					$('#editCharacterDialog').dialog('open')
+					character.methods.initEditName() // 初始化编辑角色名称
+                    $('#editPermissionTypeList').tree({
+                        data: character.data.permissionTypeList,
+                        checkbox: true // 显示复选框
+					})
+                    $('#editCharacterForm').find("input[name='id']").val(row.id)
+					$('#editCharacterForm').find("#editCharacterName").combobox('setValue', row.value)
+                    $('#editCharacterForm').find("input[name='value']").val(row.value)
+                    
+                    requestJsonServer('/uaa/role/' + row.id, 'GET').then((response) => {
+						if (response.code == 1) {
+                            character.methods.writeBackPermission(response.datas.authorities) // 回写角色权限
+                        } else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                },
+
+                // 回写角色权限
+                writeBackPermission: function (data) {
+                    $(data).each(function (index, item) {
+                        if (!item.authorities) {
+                            // 选中叶子节点
+                            var node = $('#editPermissionTypeList').tree('find', item.id)
+                            $('#editPermissionTypeList').tree('check', node.target)
+                        } else {
+                            character.methods.writeBackPermission(item.authorities)
+                        }
+                    })
+                },
+
+                // 编辑角色
+                editCharacter: function () {
+                    var parame = getParams('#editCharacterForm')
+                    var obj = $('#editPermissionTypeList').tree('getChecked', ['checked', 'indeterminate'])
+                    var list = [] // 已选中的节点
+                    if (!parame.name) {
+						message('error', '角色名称不能为空')
+						return false
+                    } else {
+						parame.name = character.data.nameMap[parame.name]
+					}
+                    if (!parame.value) {
+						message('error', '角色值不能为空')
+						return false
+                    }
+                    for (const i in obj) {
+                        list.push({
+                            id: obj[i].id
+                        })
+                    }
+					parame.authorities = list
+					showLoading()
+                    requestServer('/uaa/role', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+                            $('#editCharacterForm').form('clear')
+							$('#editCharacterDialog').dialog('close')
+							$('#characterList').datagrid("reload"); // 获取角色列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+                }
+			},
+			events: {
+
+			},
+			init: function () {
+                checkLogin() // 判断当前是否登录
+                character.methods.getPermissionTypeList() // 获取权限列表
+				character.methods.getCharacterList() // 获取角色列表
+			}
+		}
+
+		// 初始化
+		$(function () {
+			character.init()
+		})
+	</script>
+</body>
+
+</html>

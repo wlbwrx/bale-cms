@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>库位</title>
+</head>
+
+<body>
+	<div class="super-theme-example locator-head">
+		<div class="super-theme-btn">
+			<div class="download-head">
+				<button data-value="LOCATOR_LOCK" class="btn success hide" onclick="locator.methods.batchLockDialog()">批量锁库/解锁</button>
+			</div>
+			<div class="download-head">
+				<button data-value="LOCATOR_DELETE" class="btn success hide" onclick="locator.methods.batchDeleteLocator()">批量删除库位</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<input id="shelf" class="easyui-textbox" prompt="库位">
+			<input id="startShelf" class="easyui-textbox" prompt="开始库位">
+			<input id="endShelf" class="easyui-textbox" prompt="结束库位">
+			<input id="locked" class="easyui-combobox" prompt="是否锁定">
+			<button class="btn-34 info" onclick="locator.methods.searchLocatorList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+	
+	<!--批量锁库/解锁弹框-->
+	<div id="batchLockDialog" class="easyui-dialog" title="批量锁库/解锁" style="width: 400px;height: 320px" data-options="buttons: '#batchLockBtn',modal: true,closed: true">
+		<div class="form-dialog" id="batchLockForm">
+			<div class="form-item">
+				<label class="label-top">选择仓库：</label>
+				<input id="lockStorehouseId" class="easyui-combobox" prompt="仓库">
+			</div>
+			<div class="form-item">
+				<label class="label-top">开始库位：</label>
+				<input type="text" name="startShelf" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">结束库位：</label>
+				<input type="text" name="endShelf" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="batchLockBtn">
+		<button class="btn large" onclick="$('#batchLockDialog').dialog('close')">关闭</button>
+		<button class="btn large error" onclick="locator.methods.batchLock()">锁库</button>
+		<button class="btn large success" onclick="locator.methods.batchUnLock()">解锁</button>
+	</div>
+
+	<!--库位列表-->
+	<div class="panel-block">
+		<table id="locatorList" style="width: 100%"></table>
+	</div>
+
+	<!--库位明细弹框-->
+	<div id="locatorDetailsDialog" class="easyui-dialog" title="库位明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#locatorDetailsBtn',modal: true,closed: true">
+		<table id="locatorDetailsList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="locatorDetailsBtn">
+		<button class="btn large" onclick="$('#locatorDetailsDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--批量锁库失败明细弹框-->
+	<div id="batchLockMsgDialog" class="easyui-dialog" title="批量锁库失败明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#batchLockMsgBtn',modal: true,closed: true">
+		<table id="batchLockMsgList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="batchLockMsgBtn">
+		<button class="btn large" onclick="$('#batchLockMsgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--编辑库位弹框-->
+	<div id="editLocatorDialog" class="easyui-dialog" title="编辑库位" style="width: 400px;height: 200px" data-options="buttons: '#editLocatorBtn',modal: true,closed: true">
+        <div class="form-dialog" id="editLocatorForm">
+            <!--旧库位-->
+			<input type="hidden" name="storehouseId">
+			<input type="hidden" name="shelf">
+            <div class="form-item">
+                <label class="label-top">库位 *：</label>
+                <input type="text" name="newShelf" class="form-input">
+            </div>
+        </div>
+    </div>
+    <div id="editLocatorBtn">
+		<button class="btn large" onclick="$('#editLocatorDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="locator.methods.editLocator()">修改</button>
+	</div>
+	
+	<!--库位日志弹框-->
+	<div id="locatorLogDialog" class="easyui-dialog" title="库位日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#locatorLogBtn',modal: true,closed: true">
+		<table id="locatorLogList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="locatorLogBtn">
+		<button class="btn large" onclick="$('#locatorLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="locatorImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#locatorImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="locatorImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="locatorImgBtn">
+		<button class="btn large" onclick="$('#locatorImgDialog').dialog('close')">关闭</button>
+	</div>
+
+    <script type="text/javascript">
+		var locator = {
+			data: {
+				storehouseList: [], // 仓库列表
+				locatorList: [], // 库位列表
+				locatorDetailsList: [], // 库位明细列表
+				locatorLogList: [] // 库位日志列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.locator-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+							// 批量锁库/解锁弹框
+							$('#batchLockForm #lockStorehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.locator-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.locator-head #createTime').val('')
+
+					// 更新时间
+					$('.locator-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.locator-head #updateTime').val('')
+
+					// 是否锁定
+					$('.locator-head #locked').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '是否锁定'
+						}, {
+							id: 1,
+							text: '未锁定'
+						}, {
+							id: 2,
+							text: '已锁定'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					locator.methods.getLocatorList() // 库位列表
+				},
+
+				// 查询
+				searchLocatorList: function () {
+					locator.methods.getLocatorList('scrollTo') // 库位列表
+				},
+
+				// 获取库位列表
+				getLocatorList: function (scrollTo) {
+                    var createTime = $('.locator-head #createTime').val()
+					var updateTime = $('.locator-head #updateTime').val()
+					$('#locatorList').height($(window).height() - $('.locator-head').height() - 180)
+					$('#locatorList').datagrid({
+						method: 'GET',
+						url: host() + '/inventory/shelf/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.locator-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+							updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+							productSkuBarcode: $('.locator-head #productSkuBarcode').val(), // 条形码
+							shelf: $('.locator-head #shelf').val(), // 库位
+							startShelf: $('.locator-head #startShelf').val(), // 开始库位
+							endShelf: $('.locator-head #endShelf').val(), // 结束库位
+							locked: $('.locator-head #locked').val() // 是否锁定
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							locator.data.locatorList = data.datas.content
+							if (scrollTo == 'scrollTo') {
+								$('#locatorList').datagrid('scrollTo', 0)
+							}
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						checkOnSelect: false, // 点击复选框才会选中
+						selectOnCheck: false, // 选中该行将不会选中复选框
+						columns: [
+							[{
+								field: 'checkbox',
+								checkbox: true
+							}, {
+								field: 'shelf',
+								title: '库位',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value.replace(/ /g, '&nbsp;') : '--'}</div>`
+								}
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'locked',
+								title: '是否锁定',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div class="success-msg">未锁定</div>`
+									} else if (value == 2) {
+										html = `<div class="error-msg">已锁定</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="btn success" onclick="locator.methods.locatorDetailsDialog(${index})">明细</button>
+													<button data-value="LOCATOR_LOCK" class="btn error hide" onclick="locator.methods.lockLocator(${index})">锁库</button>
+													<button data-value="LOCATOR_LOCK" class="btn success hide" onclick="locator.methods.unlockLocator(${index})">解锁</button>
+													<button data-value="LOCATOR_EDIT" class="btn success hide" onclick="locator.methods.editLocatorDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+													<button data-value="LOCATOR_DELETE" class="btn error hide" onclick="locator.methods.deleteLocator(${JSON.stringify(row).replace(/"/g,"'")})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							$('#locatorList').datagrid('clearChecked') // 清除所有勾选的行
+							// 分页时候滚动条置顶
+							$("#locatorList").datagrid("getPager").pagination({
+								onSelectPage: function (pageNumber, pageSize) {
+									$('#locatorList').datagrid({pageNumber: pageNumber})
+									$('#locatorList').datagrid("reload") // 获取库位列表
+									$('#locatorList').datagrid('scrollTo', 0)
+								}
+							})
+						}
+					})
+				},
+
+				// 批量锁库/解锁弹框
+				batchLockDialog: function () {
+					$('#batchLockDialog').dialog('open')
+				},
+
+				// 批量锁库
+				batchLock: function () {
+					var parame = getParams('#batchLockForm')
+					parame.storehouseId = $('#batchLockForm #lockStorehouseId').val()
+					parame.locked = 2
+					if (!parame.storehouseId) {
+						message('error', '仓库名称不能为空')
+						return false
+					}
+					if (!parame.startShelf) {
+						message('error', '开始库位不能为空')
+						return false
+					}
+					if (!parame.endShelf) {
+						message('error', '结束库位不能为空')
+						return false
+					}
+					showLoading()
+					requestJsonServer('/inventory/shelf/lock', 'GET', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '锁库成功')
+							$('#batchLockForm').form('clear')
+							$('#batchLockDialog').dialog('close')
+							locator.methods.getLocatorList() // 获取库位列表
+						} else if (response.code == 0) {
+							var list = response.message.split(',')
+							var list_ = []
+							for (const i in list) {
+								list_.push({
+									message: list[i]
+								})
+							}
+							$('#batchLockMsgDialog').dialog('open')
+							$('#batchLockMsgList').datagrid({
+								idField: 'id',
+								fit: false,
+								loadMsg: '正在加载，请稍等...',
+								singleSelect: true, // 如果为true，则只允许选择一行
+								striped: true, // 斑马线效果
+								nowrap: false, // 自动换行
+								fitColumns: true, // 自适应宽度
+								data: list_,
+								columns: [
+									[{
+										field: 'message',
+										title: '错误信息',
+										width: 100,
+										formatter: function (value, row, index) {
+											return `<div class="error-msg">${value ? value : '--'}</div>`
+										}
+									}]
+								],
+								onLoadSuccess: function (param) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 批量解锁
+				batchUnLock: function () {
+					var parame = getParams('#batchLockForm')
+					parame.storehouseId = $('#batchLockForm #lockStorehouseId').val()
+					parame.locked = 1
+					if (!parame.storehouseId) {
+						message('error', '仓库名称不能为空')
+						return false
+					}
+					if (!parame.startShelf) {
+						message('error', '开始库位不能为空')
+						return false
+					}
+					if (!parame.endShelf) {
+						message('error', '结束库位不能为空')
+						return false
+					}
+					showLoading()
+					requestJsonServer('/inventory/shelf/lock', 'GET', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '解锁成功')
+							$('#batchLockForm').form('clear')
+							$('#batchLockDialog').dialog('close')
+							locator.methods.getLocatorList() // 获取库位列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 批量删除库位
+				batchDeleteLocator: function () {
+					var list = $('#locatorList').datagrid('getChecked')
+					var parameList = []
+					if (list.length) {
+						for (const i in list) {
+							parameList.push({
+								storehouseId: list[i].storehouseId,
+								shelf: list[i].shelf
+							})
+						}
+						$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+							if (r) {
+								showLoading()
+								requestServer('/inventory/shelf/delete', 'POST', parameList).then((response) => {
+									if (response.code == 1) {
+										message('success', '删除成功')
+										$('#locatorList').datagrid('reload') // 获取库位列表
+									} else if (response.code == -1 || response.code == -3) {
+										loginOut()
+									} else {
+										message('error', response.message)
+									}
+									hideLoading()
+								}).catch((error) => {
+									hideLoading()
+								})
+							}
+						})
+					} else {
+						message('error', '请勾选要删除的库位')
+					}
+				},
+
+				// 锁库
+				lockLocator: function (index) {
+					var obj = locator.data.locatorList[index]
+					showLoading()
+					requestJsonServer('/inventory/shelf/lock', 'GET', {
+						storehouseId: obj.storehouseId,
+						shelf: obj.shelf,
+						locked: 2
+					}).then((response) => {
+						if (response.code == 1) {
+							message('success', '锁库成功')
+							$('#locatorList').datagrid('reload') // 获取库位列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 解锁
+				unlockLocator: function (index) {
+					var obj = locator.data.locatorList[index]
+					showLoading()
+					requestJsonServer('/inventory/shelf/lock', 'GET', {
+						storehouseId: obj.storehouseId,
+						shelf: obj.shelf,
+						locked: 1
+					}).then((response) => {
+						if (response.code == 1) {
+							message('success', '解锁成功')
+							$('#locatorList').datagrid('reload') // 获取库位列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+				
+				// 编辑库位弹框
+                editLocatorDialog: function (row) {
+                    $('#editLocatorDialog').dialog('open')
+                    $('#editLocatorForm').find("input[name='storehouseId']").val(row.storehouseId)
+                    $('#editLocatorForm').find("input[name='shelf']").val(row.shelf)
+                    $('#editLocatorForm').find("input[name='newShelf']").val(row.shelf)
+				},
+				
+				// 编辑库位
+				editLocator: function () {
+					var parame = getParams('#editLocatorForm')
+					showLoading()
+                    requestServer('/inventory/shelf/edit', 'POST', [parame]).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+                            $('#editLocatorForm').form('clear')
+							$('#editLocatorDialog').dialog('close')
+							$('#locatorList').datagrid('reload') // 获取库位列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 删除库位
+				deleteLocator: function (row) {
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/inventory/shelf/delete', 'POST', [{
+								storehouseId: row.storehouseId,
+								shelf: row.shelf
+							}]).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+                                    $('#locatorList').datagrid('reload') // 获取库位列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+
+				// 库位明细列表
+				locatorDetailsDialog: function (index) {
+					var obj = locator.data.locatorList[index]
+					$('#locatorDetailsDialog').dialog('open')
+					$('#locatorDetailsList').datagrid({
+						method: 'GET',
+						url: host() + '/inventory/shelf/detail',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							shelf: obj.shelf
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							locator.data.locatorDetailsList = data.datas.content
+							$('#locatorDetailsList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="locator.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'updatedAt',
+								title: '创建时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'createdAt',
+								title: '更新时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 120,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="easyui-linkbutton success" name="shelfLog" onclick="locator.methods.locatorLogDialog(${index})">库位日志</button>
+													<button class="easyui-linkbutton error hide" href="javascript:void(0)" name="locatorDelete" data-value="LOCATOR_SKU_DELETE" onclick="locator.methods.deleteSku(${JSON.stringify(obj.shelf).replace(/"/g,"'")}, ${index})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							$("button[name='shelfLog'], button[name='locatorDelete']").linkbutton({
+								height: 26
+							})
+						}
+					})
+				},
+
+				// 库位日志列表
+				locatorLogDialog: function (index) {
+					var obj = locator.data.locatorDetailsList[index]
+					$('#locatorLogDialog').dialog('open')
+					$('#locatorLogList').datagrid({
+						method: 'GET',
+						url: host() + '/log/shelf',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							inventoryShelfId: obj.inventoryShelfId
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							locator.data.locatorLogList = data.datas.content // 库位日志列表
+							$('#locatorLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'change_type',
+								title: '类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="success-msg">上架</div>`
+									} else if (value == 20) {
+										html = `<div class="error-msg">下架</div>`
+									} else if (value == 30) {
+										html = `<div class="error-msg">移库</div>`
+									} else if (value == 40) {
+										html = `<div class="error-msg">盘点</div>`
+									} else if (value == 50) {
+										html = `<div class="error-msg">库位编辑</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'before_quantity',
+								title: '变更前库存',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'after_quantity',
+								title: '变更后库存',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${row.after_quantity - row.before_quantity}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'change_comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 删除库存
+				deleteSku: function (shelf, index) {
+					var obj = locator.data.locatorDetailsList[index]
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/inventory/shelf/sku/delete', 'POST', [{
+								storehouseId: obj.storehouseId,
+								shelf: shelf,
+								productSkuBarcode: obj.productSkuBarcode
+							}]).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+                                    $('#locatorDetailsList').datagrid('reload') // 库位明细列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+
+				// 查看大图
+				bigImg: function (index) {
+					var obj = locator.data.locatorDetailsList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#locatorImg').attr('src', obj.productSkuImage)
+					$('#locatorImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				locator.methods.initSearch() // 初始化条件查询
+			}
+		} 
+
+		// 初始化
+		$(function () {
+			locator.init()
+		})
+	</script>
+</body>
+
+</html>

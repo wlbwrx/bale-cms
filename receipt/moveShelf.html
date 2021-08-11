@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>移库待上架</title>
+</head>
+
+<body>
+	<div class="super-theme-example moveshelf-head">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<!-- <input id="batchNumber" class="easyui-textbox" prompt="收货单号"> -->
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<button class="btn-34 info" onclick="moveShelf.methods.searchMoveShelfList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--未上架列表-->
+	<div class="panel-block">
+		<table id="moveShelfList" style="width: 100%"></table>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="moveShelfImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#moveShelfImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="moveShelfImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="moveShelfImgBtn">
+		<button class="btn large" onclick="$('#moveShelfImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var moveShelf = {
+			data: {
+				moveShelfList: [] // 未上架列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.moveshelf-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.moveshelf-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+
+					// 更新时间
+					$('.moveshelf-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.moveshelf-head #updateTime').val('')
+
+					moveShelf.methods.getMoveShelfList() // 获取未上架列表
+				},
+
+				// 查询
+				searchMoveShelfList: function () {
+					moveShelf.methods.getMoveShelfList() // 获取未上架列表
+				},
+
+				// 获取未上架列表
+				getMoveShelfList: function () {
+					var createTime = $('.moveshelf-head #createTime').val()
+					var updateTime = $('.moveshelf-head #updateTime').val()
+					$('#moveShelfList').height($(window).height() - $('.moveshelf-head').height() - 170)
+					$('#moveShelfList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/remove/shelves/lists',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.moveshelf-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+							updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+							productSkuBarcode: $('.moveshelf-head #productSkuBarcode').val() // 条形码
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							moveShelf.data.moveShelfList = data.datas.content
+							$('#moveShelfList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="moveShelf.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'quantity',
+								title: '待上架数量',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													${value}
+												</div>`
+									return html
+								}
+							}, {
+								field: 'createdAt',
+								title: '创建时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+				
+                // 查看大图
+				bigImg: function (index) {
+					var obj = moveShelf.data.moveShelfList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#moveShelfImg').attr('src', obj.productSkuImage)
+					$('#moveShelfImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				moveShelf.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			moveShelf.init()
+		})
+	</script>
+</body>
+
+</html>

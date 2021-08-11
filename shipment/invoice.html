@@ -1,0 +1,1704 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>发货单</title>
+</head>
+
+<body>
+	<div class="super-theme-example invoice-head">
+		<div class="super-theme-btn">
+			<!-- <div class="download-head">
+				<button data-value="INVOICE_CREATE" class="btn success hide">创建发货单</button>
+				<input type="file" onchange="invoice.methods.createInvoice(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#createInvoice',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="createInvoice" class="download-btn-menu">
+					<div>
+						<a href="../excel/发货单模板.xls" class="success">下载发货单模板</a>
+					</div>
+				</div>
+			</div> -->
+			<div class="download-head">
+				<button data-value="INVOICE_BIND" class="btn success hide">变更物流单号</button>
+				<input type="file" onchange="invoice.methods.changePick(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#changePick',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="changePick" class="download-btn-menu">
+					<div>
+						<a href="../excel/发货单变更物流单模板.xls" class="success">下载变更物流单模板</a>
+					</div>
+				</div>
+			</div>
+			<div class="download-head">
+				<button data-value="INVOICE_REPAIR" class="btn success hide">发货单修复</button>
+				<input type="file" onchange="invoice.methods.invoiceRepair(this)" />
+			</div>
+			<div class="download-head">
+				<button data-value="INVOICE_BIND" class="btn success hide">绑定物流单号</button>
+				<input type="file" onchange="invoice.methods.bindPick(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#bindPick',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="bindPick" class="download-btn-menu">
+					<div>
+						<a href="../excel/发货单绑定物流单模板.xls" class="success">下载绑定物流单模板</a>
+					</div>
+				</div>
+			</div>
+			<div class="download-head">
+				<button data-value="INVOICE_OUT" class="btn success hide">发货单出库</button>
+				<input type="file" onchange="invoice.methods.invoiceOut(this)" />
+				<a href="javascript:void(0)" class="easyui-menubutton success download-btn" data-options="height: 28,menu: '#invoiceOut',menuAlign: 'right',hasDownArrow: false"><i class="fa fa-sort-desc"></i></a>
+				<div id="invoiceOut" class="download-btn-menu">
+					<div>
+						<a href="../excel/发货单出库模板.xls" class="success">下载发货单出库模板</a>
+					</div>
+				</div>
+			</div>
+			<div class="download-head">
+				<button data-value="INVOICE_EXPORT" class="btn success hide" onclick="invoice.methods.invoiceAllExport()">导出发货单</button>
+			</div>
+			<!-- <div class="download-head">
+				<button data-value="INVOICE_EXPORT" class="btn success hide" onclick="invoice.methods.invoiceWholeExport()">导出发货单及明细</button>
+			</div> -->
+			<div class="download-head">
+				<button data-value="INVOICE_EXPORT" class="btn success hide" onclick="invoice.methods.invoiceAllLogExport()">导出发货单日志</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="invoiceCode" class="easyui-textbox" prompt="发货单号">
+			<input id="pickCode" class="easyui-textbox" prompt="物流单号">
+			<input id="waveCode" class="easyui-textbox" prompt="拣货拨次单号">
+			<input id="tel" class="easyui-textbox" prompt="电话">
+			<input id="returnInvoiceLogistic" class="easyui-textbox" prompt="退货单号">
+			<input id="invoiceStatus" class="easyui-combobox" prompt="发货单状态">
+			<!-- <input id="logisticStatus" class="easyui-combobox" prompt="物流状态"> -->
+			<input id="invoiceType" class="easyui-combobox" prompt="货品类型">
+			<input id="havePickCode" class="easyui-combobox" prompt="物流单号">
+			<input id="scopeId" class="easyui-combobox" prompt="全部商城">
+			<input id="addressType" class="easyui-combobox" prompt="全部配送方式">
+			<button class="btn-34 info" onclick="invoice.methods.searchInvoiceList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--发货单列表-->
+	<div class="panel-block">
+		<table id="invoiceList" style="width: 100%"></table>
+	</div>
+
+	<!--发货单明细弹框-->
+	<div id="invoiceDetailsDialog" class="easyui-dialog" title="发货单明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#invoiceDetailsBtn',modal: true,closed: true">
+		<table id="invoiceDetailsList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="invoiceDetailsBtn">
+		<button class="btn large" onclick="$('#invoiceDetailsDialog').dialog('close')">关闭</button>
+		<!--data-value="PICK_PRINT"-->
+		<button class="btn success large" onclick="invoice.methods.printFaceSheet()">打印面单</button>
+	</div>
+
+	<!--发货单日志弹框-->
+	<div id="invoiceLogDialog" class="easyui-dialog" title="发货单日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#invoiceLogBtn',modal: true,closed: true">
+		<table id="invoiceLogList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="invoiceLogBtn">
+		<button class="btn large" onclick="$('#invoiceLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--发货单缺货明细列表-->
+	<div id="invoiceShortageDialog" class="easyui-dialog" title="发货单缺货明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#invoiceShortageBtn',modal: true,closed: true">
+		<table id="invoiceShortageList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="invoiceShortageBtn">
+		<button class="btn large" onclick="$('#invoiceShortageDialog').dialog('close')">关闭</button>
+		<button data-value="INVOICE_SHORTAGE" class="btn success large" onclick="invoice.methods.invoicePush()">确认补货</button>
+	</div>
+
+	<!--创建发货单失败明细弹框-->
+	<div id="createInvoiceDialog" class="easyui-dialog" title="创建发货单失败明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#createInvoiceBtn',modal: true,closed: true">
+		<table id="createInvoiceList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="createInvoiceBtn">
+		<button class="btn large" onclick="$('#createInvoiceDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--绑定物流单失败明细弹框-->
+	<div id="bindPickDialog" class="easyui-dialog" title="绑定物流单失败明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#bindPickBtn',modal: true,closed: true">
+		<table id="bindPickList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="bindPickBtn">
+		<button class="btn large" onclick="$('#bindPickDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--发货单出库失败明细弹框-->
+	<div id="invoiceOutDialog" class="easyui-dialog" title="发货单出库失败明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#invoiceOutBtn',modal: true,closed: true">
+		<table id="invoiceOutList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="invoiceOutBtn">
+		<button class="btn large" onclick="$('#invoiceOutDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="invoiceImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#invoiceImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="invoiceImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="invoiceImgBtn">
+		<button class="btn large" onclick="$('#invoiceImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var invoice = {
+			data: {
+				invoiceList: [], // 发货单列表
+				invoiceDetails: {}, // 发货单明细
+				invoiceDetailsList: [], // 发货单明细商品列表
+				invoiceIndex: [], // 当前要打印面单的发货单下标
+				invoiceLogList: [] // 发货单日志列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.invoice-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.invoice-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+
+					// 更新时间
+					$('.invoice-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('.invoice-head #updateTime').val('')
+
+					// 发货单状态
+					$('.invoice-head #invoiceStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '发货单状态'
+						}, {
+							id: 10,
+							text: '已创建'
+						}, {
+							id: 20,
+							text: '拣货中'
+						}, {
+							id: 30,
+							text: '待配货'
+						}, {
+							id: 40,
+							text: '待复核'
+						}, {
+							id: 60,
+							text: '待出库'
+						}, {
+							id: 70,
+							text: '已出库'
+						}, {
+							id: 80,
+							text: '待退回'
+						}, {
+							id: 90,
+							text: '已退回'
+						}, {
+							id: 120,
+							text: '缺货'
+						}, {
+							id: -10,
+							text: '发货作废'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					// 物流状态
+					// $('.invoice-head #logisticStatus').combobox({
+					// 	editable: false, // 禁止输入
+					// 	valueField: 'id',
+					// 	textField: 'text',
+					// 	data: [{
+					// 		id: '',
+					// 		text: '物流状态'
+					// 	}, {
+					// 		id: 'pending',
+					// 		text: '查询中'
+					// 	}, {
+					// 		id: 'notfound',
+					// 		text: '查询不到'
+					// 	}, {
+					// 		id: 'transit',
+					// 		text: '运输途中'
+					// 	}, {
+					// 		id: 'pickup',
+					// 		text: '到达待取'
+					// 	}, {
+					// 		id: 'delivered',
+					// 		text: '成功签收'
+					// 	}, {
+					// 		id: 'undelivered',
+					// 		text: '投递失败'
+					// 	}, {
+					// 		id: 'exception',
+					// 		text: '可能异常'
+					// 	}, {
+					// 		id: 'expired',
+					// 		text: '运输过久'
+					// 	}, {
+					// 		id: 'other',
+					// 		text: '其他状态'
+					// 	}],
+					// 	onSelect: function (rec) {
+
+					// 	}
+					// })
+
+					// 货品类型
+					$('.invoice-head #invoiceType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '货品类型'
+						}, {
+							id: '0',
+							text: '普货'
+						}, {
+							id: '1',
+							text: '特货'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					// 物流单号
+					$('.invoice-head #havePickCode').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '物流单号'
+						}, {
+							id: '1',
+							text: '已绑定'
+						}, {
+							id: '2',
+							text: '未绑定'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					// 商城
+					$('.invoice-head #scopeId').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '全部商城',
+							selected :true
+						}, {
+							id: '18',
+							text: '折多多'
+						}, {
+							id: '8',
+							text: '阿噗特賣'
+						}, {
+							id: '17',
+							text: '测试'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					// 配送方式
+					$('.invoice-head #addressType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '全部配送方式',
+							selected :true
+						}, {
+							id: '1',
+							text: '宅配'
+						}, {
+							id: '2',
+							text: '全家'
+						}, {
+							id: '3',
+							text: '711'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+					invoice.methods.getInvoiceList() // 获取发货单列表
+				},
+
+				// 查询
+				searchInvoiceList: function () {
+					invoice.methods.getInvoiceList() // 获取发货单列表
+				},
+
+				// 获取发货单列表
+				getInvoiceList: function () {
+					var createTime = $('.invoice-head #createTime').val()
+					var updateTime = $('.invoice-head #updateTime').val()
+					$('#invoiceList').height($(window).height() - $('.invoice-head').height() - 160)
+					$('#invoiceList').datagrid({
+						method: 'GET',
+						url: host() + '/invoice/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.invoice-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+							updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+							invoiceCode: $('.invoice-head #invoiceCode').val(), // 发货单号
+							pickCode: $('.invoice-head #pickCode').val(), // 物流单号
+							waveCode: $('.invoice-head #waveCode').val(), // 拣货拨次单号
+							tel: $('.invoice-head #tel').val(), // 电话
+							returnInvoiceLogistic: $('.invoice-head #returnInvoiceLogistic').val(), // 退货单号
+							status: $('.invoice-head #invoiceStatus').val(), // 发货单状态
+							scopeId: $('.invoice-head #scopeId').val(), // 商城
+							addressType: $('.invoice-head #addressType').val(), // 配送方式
+							// logisticsStatus: $('.invoice-head #logisticStatus').val(), // 物流状态
+							invoiceType: $('.invoice-head #invoiceType').val(), // 货品类型
+							havePickCode: $('.invoice-head #havePickCode').val() // 是否有物流单号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							invoice.data.invoiceList = data.datas.content
+							$('#invoiceList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: false, // 自适应宽度
+						columns: [
+							[{
+								field: 'invoiceCode',
+								title: '发货单号',
+								width: 160,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'pickCode',
+								title: '物流单号',
+								width: 150,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'addressType',
+								title: '配送方式',
+								width: 100,
+								formatter: function (value, row, index) {
+									var addressType = ''
+									if (value == 1) {
+										addressType = `<div>宅配</div>`
+									} else if (value == 2) {
+										addressType = `<div>全家</div>`
+									} else if (value == 3) {
+										addressType = `<div>711</div>`
+									}
+									return addressType
+								}
+							}, {
+								field: 'waveCode',
+								title: '拣货拨次单号',
+								width: 220,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'createdAt',
+								title: '创建时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 150,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'status',
+								title: '发货单状态',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="success-msg">已创建</div>`
+									} else if (value == 20) {
+										html = `<div class="error-msg">拣货中</div>`
+									} else if (value == 30) {
+										html = `<div class="error-msg">待配货</div>`
+									} else if (value == 40) {
+										html = `<div class="error-msg">待复核</div>`
+									} else if (value == 50) {
+										html = `<div class="error-msg">待打包</div>`
+									} else if (value == 60) {
+										html = `<div class="error-msg">待出库</div>`
+									} else if (value == 70) {
+										html = `<div class="success-msg">已出库</div>`
+									} else if (value == 80) {
+										html = `<div class="warning-msg">待退回</div>`
+									} else if (value == 90) {
+										html = `<div class="success-msg">已退回</div>`
+									} else if (value == 100) {
+										html = `<div class="error-msg">已拆分</div>`
+									} else if (value == 110) {
+										html = `<div class="success-msg">配货完成</div>`
+									} else if (value == 120) {
+										html = `<div class="error-msg">缺货</div>`
+									} else if (value == -10) {
+										html = `<div class="error-msg">发货作废</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'returnInvoiceLogistic',
+								title: '退货单号',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'scopeId',
+								title: '商城',
+								width: 100,
+								formatter: function (value, row, index) {
+									var storeName = ''
+									if (value == 0){
+										storeName = `<div>全部商城</div>`
+									} else if (value == 8) {
+										storeName = `<div>阿噗特賣</div>`
+									} else if (value == 17) {
+										storeName = `<div>测试</div>`
+									} else if (value == 18) {
+										storeName = `<div>折多多</div>`
+									}
+									return storeName
+								}
+							}, {
+								field: 'consignee',
+								title: '收货人',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'tel',
+								title: '电话',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'detail',
+								title: '详细地址',
+								width: 300,
+								formatter: function (value, row, index) {
+									return `<div>${row.city} ${row.district} ${row.detail}</div>`
+								}
+							}, {
+								field: 'comments',
+								title: '留言',
+								width: 300,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'invoicePrice',
+								title: '价格',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (row.shippingFreight) {
+										html = `<div class="invoice-price">${row.invoicePrice + row.shippingFreight}</div><div class="shipping-freight"><i class="fa fa-plane"></i>${row.shippingFreight}</div>`
+									} else {
+										html = `<div class="invoice-price">${row.invoicePrice}</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'logisticsStatus',
+								title: '物流状态',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 'pending') {
+										html = `<div class="error-msg">查询中</div>`
+									} else if (value == 'notfound') {
+										html = `<div class="error-msg">查询不到</div>`
+									} else if (value == 'transit') {
+										html = `<div class="error-msg">运输途中</div>`
+									} else if (value == 'pickup') {
+										html = `<div class="error-msg">到达待取</div>`
+									} else if (value == 'delivered') {
+										html = `<div class="success-msg">成功签收</div>`
+									} else if (value == 'undelivered') {
+										html = `<div class="error-msg">投递失败</div>`
+									} else if (value == 'exception') {
+										html = `<div class="error-msg">可能异常</div>`
+									} else if (value == 'expired') {
+										html = `<div class="error-msg">运输过久</div>`
+									} else {
+										html = `<div>其他</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'remark',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'invoiceType',
+								title: '货品类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 0) {
+										html = `<div class="success-msg">普货</div>`
+									} else if (value == 1) {
+										html = `<div class="error-msg">特货</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 200,
+								formatter: function (value, row, index) {
+									// <button data-value="INVOICE_EXPORT" class="btn success hide" onclick="invoice.methods.invoiceLogExport(${index})">导出</button>
+									var html = `<div class="table-btn-group">
+													<button class="btn info" onclick="invoice.methods.invoiceDetailsDialog(${index})">明细</button>
+													<button class="btn success" onclick="invoice.methods.invoiceLogDialog(${index})">日志</button>
+													${row.status == 120 ? `<button data-value="INVOICE_SHORTAGE" class="btn error hide" onclick="invoice.methods.invoiceShortageDialog(${index})">补货</button>` : ``}
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 创建发货单
+				createInvoice: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', '文件类型不正确')
+								return
+							}
+							// 创建发货单提交
+							invoice.methods.createInvoiceNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 创建发货单提交
+				createInvoiceNext: function (paramList) {
+					var list = [] // 处理后的数据
+					var index = -1 // 当前发货单下标
+					for (let i = 1; i < paramList.length; i++) {
+						if (paramList[i]['发货单号']) {
+							// push发货单
+							list.push({
+								'invoiceCode': paramList[i]['发货单号'],
+								'invoicePrice': paramList[i]['代收'],
+								'remark': paramList[i]['备注'],
+								'consignee': paramList[i]['收货人'],
+								'tel': paramList[i]['电话'],
+								'city': paramList[i]['城市'],
+								'district': paramList[i]['区域'],
+								'detail': paramList[i]['详细地址'],
+								'comments': paramList[i]['客户留言'],
+								'invoiceDetails': [{
+									'productSkuBarcode': paramList[i]['商品信息'],
+									'productSkuImage': paramList[i]['__EMPTY'],
+									'productSkuName': paramList[i]['__EMPTY_1'],
+									'productSkuPrice': paramList[i]['__EMPTY_2'],
+									'quantity': paramList[i]['__EMPTY_3']
+								}]
+							})
+							index++
+						} else {
+							// push商品
+							list[index]['invoiceDetails'].push({
+								'productSkuBarcode': paramList[i]['商品信息'],
+								'productSkuImage': paramList[i]['__EMPTY'],
+								'productSkuName': paramList[i]['__EMPTY_1'],
+								'productSkuPrice': paramList[i]['__EMPTY_2'],
+								'quantity': paramList[i]['__EMPTY_3']
+							})
+						}
+					}
+					
+					requestServer('/api/invoice/create', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 创建发货单失败明细
+							if (response.datas.length == 0) {
+								message('success', '创建成功')
+							} else {
+								$('#createInvoiceDialog').dialog('open')
+								$('#createInvoiceList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'invoiceCode',
+											title: '发货单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'validateMsg',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							invoice.methods.getInvoiceList() // 获取发货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 变更物流单
+				changePick: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', '文件类型不正确')
+								return
+							}
+							// 绑定物流单提交
+							invoice.methods.changePickNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 变更物流单提交
+				changePickNext: function (paramList) {
+					var list = [] // 处理后的数据
+					for (let i = 0; i < paramList.length; i++) {
+						list.push({
+							'invoiceCode': paramList[i]['发货单号'],
+							'pickCode': paramList[i]['变更后物流单号'],
+							'branch': paramList[i]['站所']
+						})
+					}
+
+					showLoading()
+					requestServer('/invoice/RpickCode', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 变更物流单失败明细
+							if (response.datas.length == 0) {
+								message('success', '变更成功')
+							} else {
+								$('#bindPickDialog').dialog('open')
+								$('#bindPickList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'invoiceCode',
+											title: '发货单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'pickCode',
+											title: '物流单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'validateMsg',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							invoice.methods.getInvoiceList() // 获取发货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 发货单修复
+				invoiceRepair: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', '文件类型不正确')
+								return
+							}
+							// 发货单出库提交
+							invoice.methods.invoiceRepairNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 发货单修复提交
+				invoiceRepairNext: function (paramList) {
+					var list = [] // 处理后的数据
+					for (let i = 0; i < paramList.length; i++) {
+						list.push({
+							'expressCode': paramList[i]['快递单号'],
+							'carrierCode': paramList[i]['物流公司'],
+							'weight': paramList[i]['重量']
+						})
+					}
+					
+					showLoading()
+					requestServer('/invoice/outbounds', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 发货单修复失败明细
+							if (response.datas.length == 0) {
+								message('success', '修复成功')
+							} else {
+								$('#invoiceOutDialog').dialog('open')
+								$('#invoiceOutList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'expressCode',
+											title: '物流单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'message',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							invoice.methods.getInvoiceList() // 获取发货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 绑定物流单
+				bindPick: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', '文件类型不正确')
+								return
+							}
+							// 绑定物流单提交
+							invoice.methods.bindPickNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 绑定物流单提交
+				bindPickNext: function (paramList) {
+					var list = [] // 处理后的数据
+					for (let i = 0; i < paramList.length; i++) {
+						list.push({
+							'invoiceCode': paramList[i]['发货单号'],
+							'pickCode': paramList[i]['物流单号'],
+							'branch': paramList[i]['站所']
+						})
+					}
+					
+					showLoading()
+					requestServer('/invoice/pickCode', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 绑定物流单失败明细
+							if (response.datas.length == 0) {
+								message('success', '绑定成功')
+							} else {
+								$('#bindPickDialog').dialog('open')
+								$('#bindPickList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'invoiceCode',
+											title: '发货单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'pickCode',
+											title: '物流单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'validateMsg',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							invoice.methods.getInvoiceList() // 获取发货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 发货单出库
+				invoiceOut: function (e) {
+					var files = $(e).context.files
+					var fileReader = new FileReader()
+					if (files.length) {
+						fileReader.onload = function (ev) {
+							try {
+								var data = ev.target.result
+								var workbook = XLSX.read(data, {
+									type: 'binary'
+								})
+							} catch (e) {
+								message('error', '文件类型不正确')
+								return
+							}
+							// 发货单出库提交
+							invoice.methods.invoiceOutNext(XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]))
+							e.value = '' // 清空
+						}
+						// 以二进制方式打开文件
+						fileReader.readAsBinaryString(files[0])
+					}
+				},
+
+				// 发货单出库提交
+				invoiceOutNext: function (paramList) {
+					var list = [] // 处理后的数据
+					for (let i = 0; i < paramList.length; i++) {
+						list.push({
+							'invoiceCode': paramList[i]['发货单号'],
+							'expressCode': paramList[i]['快递单号'],
+							'carrierCode': paramList[i]['物流公司'],
+							'weight': paramList[i]['重量']
+						})
+					}
+					
+					requestServer('/invoice/outbound', 'POST', list).then((response) => {
+						if (response.code == 1) {
+							// 发货单出库失败明细
+							if (response.datas.length == 0) {
+								message('success', '出库成功')
+							} else {
+								$('#invoiceOutDialog').dialog('open')
+								$('#invoiceOutList').datagrid({
+									idField: 'id',
+									fit: false,
+									loadMsg: '正在加载，请稍等...',
+									singleSelect: true, // 如果为true，则只允许选择一行
+									striped: true, // 斑马线效果
+									nowrap: false, // 自动换行
+									fitColumns: true, // 自适应宽度
+									data: response.datas,
+									columns: [
+										[{
+											field: 'expressCode',
+											title: '物流单号',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div>${value ? value : '--'}</div>`
+											}
+										}, {
+											field: 'message',
+											title: '错误信息',
+											width: 100,
+											formatter: function (value, row, index) {
+												return `<div class="error-msg">${value ? value : '--'}</div>`
+											}
+										}]
+									],
+									onLoadSuccess: function (param) {
+
+									}
+								})
+							}
+							invoice.methods.getInvoiceList() // 获取发货单列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+				// 导出发货单（头部）
+				invoiceAllExport: function () {
+					var createTime = $('.invoice-head #createTime').val()
+					var updateTime = $('.invoice-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/invoice/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.invoice-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'invoiceCode'}).val($('.invoice-head #invoiceCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'pickCode'}).val($('.invoice-head #pickCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'waveCode'}).val($('.invoice-head #waveCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'tel'}).val($('.invoice-head #tel').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'returnInvoiceLogistic'}).val($('.invoice-head #returnInvoiceLogistic').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'status'}).val($('.invoice-head #invoiceStatus').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'invoiceType'}).val($('.invoice-head #invoiceType').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'havePickCode'}).val($('.invoice-head #havePickCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'scopeId'}).val($('.invoice-head #scopeId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'addressType'}).val($('.invoice-head #addressType').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 导出发货单及明细（头部）
+				invoiceWholeExport: function () {
+					var createTime = $('.invoice-head #createTime').val()
+					var updateTime = $('.invoice-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/invoice/whole/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'pickCode'}).val($('.invoice-head #pickCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'tel'}).val($('.invoice-head #tel').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'returnInvoiceLogistic'}).val($('.invoice-head #returnInvoiceLogistic').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'status'}).val($('.invoice-head #invoiceStatus').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'logisticsStatus'}).val($('.invoice-head #logisticStatus').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 导出发货单日志（头部）
+				invoiceAllLogExport: function () {
+					var createTime = $('.invoice-head #createTime').val()
+					var updateTime = $('.invoice-head #updateTime').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/invoice/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.invoice-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(createTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(createTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedBegainTime'}).val(timestamp(updateTime.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'updatedEndTime'}).val(timestamp(updateTime.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'invoiceCode'}).val($('.invoice-head #invoiceCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'pickCode'}).val($('.invoice-head #pickCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'waveCode'}).val($('.invoice-head #waveCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'tel'}).val($('.invoice-head #tel').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'returnInvoiceLogistic'}).val($('.invoice-head #returnInvoiceLogistic').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'status'}).val($('.invoice-head #invoiceStatus').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'invoiceType'}).val($('.invoice-head #invoiceType').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'havePickCode'}).val($('.invoice-head #havePickCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'scopeId'}).val($('.invoice-head #scopeId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'addressType'}).val($('.invoice-head #addressType').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 发货单明细列表
+				invoiceDetailsDialog: function (index) {
+					var obj = invoice.data.invoiceList[index]
+					$('#invoiceDetailsList').datagrid({
+						method: 'GET',
+						url: host() + '/invoice/' + obj.invoiceCode + '/' + obj.storehouseId,
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							invoice.data.invoiceIndex = index
+							invoice.data.invoiceDetails = data.datas[0]
+							invoice.data.invoiceDetailsList = data.datas[0].invoiceDetails
+							var total = 0 // 总数
+							for (const i in data.datas[0].invoiceDetails) {
+								total += data.datas[0].invoiceDetails[i].quantity
+							}
+							$('#invoiceDetailsDialog').dialog({title: `发货单明细&nbsp;&nbsp;&nbsp;&nbsp;sku个数：${data.datas[0].invoiceDetails.length}&nbsp;&nbsp;&nbsp;&nbsp;总数：${total}`})
+							$('#invoiceDetailsDialog').dialog('open')
+							return {
+								rows: data.datas[0].invoiceDetails
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="invoice.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productTitle',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'shortQuantity',
+								title: '缺货数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 打印面单
+				printFaceSheet: function () {
+					var obj = invoice.data.invoiceDetails
+					if (obj.pickCode) {
+						requestJsonServer('/invoice/print/' + obj.invoiceCode + '/' + obj.storehouseId, 'GET', {}).then((response) => {
+							if (response.code == 1) {
+								printFaceSheetTag(response.datas[0])
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+								$('.shelf-all-number').text('未上架总数：0')
+							}
+						}).catch((error) => {
+							console.log(error)
+						})
+					} else {
+						message('error', '请先绑定物流单号')
+					}
+				},
+
+				// 发货单日志列表
+				invoiceLogDialog: function (index) {
+					var obj = invoice.data.invoiceList[index]
+					$('#invoiceLogDialog').dialog('open')
+					$('#invoiceLogList').datagrid({
+						method: 'GET',
+						url: host() + '/log/invoice',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							invoiceCode: obj.invoiceCode
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							invoice.data.invoiceLogList = data.datas.content // 发货单日志列表
+							$('#invoiceLogList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'invoice_code',
+								title: '发货单号',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_image',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="invoice.methods.bigImg1(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'product_name',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_name',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'event_status',
+								title: '状态',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 10) {
+										html = `<div class="success-msg">已创建</div>`
+									} else if (value == 20) {
+										html = `<div class="error-msg">拣货中</div>`
+									} else if (value == 30) {
+										html = `<div class="error-msg">待配货</div>`
+									} else if (value == 40) {
+										html = `<div class="error-msg">待复核</div>`
+									} else if (value == 50) {
+										html = `<div class="error-msg">待打包</div>`
+									} else if (value == 60) {
+										html = `<div class="error-msg">待出库</div>`
+									} else if (value == 70) {
+										html = `<div class="success-msg">已出库</div>`
+									} else if (value == 80) {
+										html = `<div class="warning-msg">待退回</div>`
+									} else if (value == 90) {
+										html = `<div class="success-msg">已退回</div>`
+									} else if (value == 100) {
+										html = `<div class="error-msg">已拆分</div>`
+									} else if (value == 110) {
+										html = `<div class="success-msg">配货完成</div>`
+									} else if (value == 120) {
+										html = `<div class="error-msg">缺货</div>`
+									} else if (value == -10) {
+										html = `<div class="error-msg">发货作废</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'action_type',
+								title: '操作类型',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 1) {
+										html = `<div>发货单创建</div>`
+									} else if (value == 2) {
+										html = `<div>发货单绑定物流</div>`
+									} else if (value == 3) {
+										html = `<div>发货单创建拣货拨次</div>`
+									} else if (value == 4) {
+										html = `<div>发货单拣货</div>`
+									} else if (value == 5) {
+										html = `<div>发货单拣货完成</div>`
+									} else if (value == 6) {
+										html = `<div>发货单配货</div>`
+									} else if (value == 7) {
+										html = `<div>发货单配货完成</div>`
+									} else if (value == 8) {
+										html = `<div>发货单复核</div>`
+									} else if (value == 9) {
+										html = `<div>发货单复核完成</div>`
+									} else if (value == 10) {
+										html = `<div>发货单待配货转待上架</div>`
+									} else if (value == 11) {
+										html = `<div>发货单待复核转待上架</div>`
+									} else if (value == 12) {
+										html = `<div>发货单出库</div>`
+									} else if (value == 13) {
+										html = `<div>取消发货单</div>`
+									} else if (value == 14) {
+										html = `<div>发货单拆包</div>`
+									} else if (value == 15) {
+										html = `<div>老系统拆单</div>`
+									} else if (value == 16) {
+										html = `<div>发货单补货</div>`
+									} else if (value == 17) {
+										html = `<div>发货单退回</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'event_name',
+								title: '事件名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 导出发货单日志
+				invoiceLogExport: function (index) {
+					var obj = invoice.data.invoiceList[index]
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/log/invoice/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'invoiceCode'}).val(obj.invoiceCode))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 发货单缺货明细列表
+				invoiceShortageDialog: function (index) {
+					var obj = invoice.data.invoiceList[index]
+					$('#invoiceShortageDialog').dialog('open')
+					$('#invoiceShortageList').datagrid({
+						method: 'GET',
+						url: host() + '/invoice/' + obj.invoiceCode + '/' + obj.storehouseId,
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							invoice.data.invoiceIndex = index
+							invoice.data.invoiceDetails = data.datas[0]
+							invoice.data.invoiceDetailsList = data.datas[0].invoiceDetails
+							return {
+								rows: data.datas[0].invoiceDetails
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="invoice.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productTitle',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div class="sku">${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'shortQuantity',
+								title: '缺货数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'replenish',
+								title: '补货数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${row.shortQuantity != 0 ? `<input id="replenish_${index}" type="number" name="replenish" onchange="invoice.methods.replenishManual(${index})" class="replenish-input" />` : ``}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 手动收补货数量
+				replenishManual: function (index) {
+					var obj = invoice.data.invoiceDetailsList[index]
+					var number = $('#replenish_' + index).val() // 输入的值
+					if (number > 0) {
+						if (number > obj.shortQuantity) {
+							$('#replenish_' + index).val(parseInt(obj.shortQuantity))
+						}
+					} else {
+						$('#replenish_' + index).val(0)
+						message('error', '数量不能小于0')
+					}
+				},
+
+				// 确认补货
+				invoicePush: function () {
+					var storehouseId = invoice.data.invoiceDetails.storehouseId // 仓库
+					var invoiceCode = invoice.data.invoiceDetails.invoiceCode // 发货单号
+					var paramList = {invoiceDetailsList: []}
+					paramList.storehouseId = storehouseId
+					paramList.invoiceCode = invoiceCode
+
+					$('#invoiceShortageDialog').find('tbody tr').each(function () {
+						var productSkuBarcode = $(this).find('.sku').text()
+						var quantity = $(this).find('input[name="replenish"]').val()
+						if (quantity > 0) {
+							paramList.invoiceDetailsList.push({
+								productSkuBarcode: productSkuBarcode,
+								quantity: quantity
+							})
+						}
+					})
+
+					if (paramList.invoiceDetailsList.length > 0) {
+						showLoading()
+						requestServer('/invoice/turnback', 'PUT', paramList).then((response) => {
+							if (response.code == 1) {
+								message('success', '补货成功')
+								$('#invoiceShortageDialog').dialog('close')
+								$('#invoiceShortageList').datagrid("reload"); // 发货单缺货明细列表
+							} else if (response.code == -1 || response.code == -3) {
+								loginOut()
+							} else {
+								message('error', response.message)
+							}
+							hideLoading()
+						}).catch((error) => {
+							hideLoading()
+						})
+					} else {
+						message('error', '补货数量不能为空')
+					}
+				},
+
+				// 查看大图（发货单明细）
+				bigImg: function (index) {
+					var obj = invoice.data.invoiceDetailsList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productTitle}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#invoiceImg').attr('src', obj.productSkuImage)
+					$('#invoiceImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（发货单日志）
+				bigImg1: function (index) {
+					var obj = invoice.data.invoiceLogList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.product_sku_barcode}</div>
+									<div>${obj.product_name}</div>
+									<div>${obj.product_sku_name}</div>
+								</div>`
+					$('#invoiceImg').attr('src', obj.product_sku_image)
+					$('#invoiceImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				invoice.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			invoice.init()
+		})
+	</script>
+</body>
+
+</html>

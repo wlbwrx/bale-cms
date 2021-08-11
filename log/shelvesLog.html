@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>上架统计</title>
+</head>
+
+<body>
+
+	<div class="easyui-tabs shelveslog-head" style="height: calc(100% - 20px);margin: 10px auto;">
+		<div title="统计" style="padding: 10px;">
+			<div class="tab-head-one">
+				<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+                <input id="batchReceiptStatus2" class="easyui-combobox" prompt="选择时间">
+				<input id="chooseSheTime" class="form-date" placeholder="自定义时间" style="display: none;">
+				<button class="btn-34 info" onclick="shelvesLog.methods.searchShelvesLogEchart()"><i class="fa fa-search"></i></button>
+				<span class="receipt-all-number" style="color:#333;margin-top:10px;margin-left:0;display:block;font-size:14px;">
+					<table style="float:left;">
+						<tr>
+							<td>今日应上架sku个数: <span id="skurCountShelve" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>今日应上架sku总数: <span id="skuShelfSum" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+						<tr>
+							<td>今日已上架SKU个数: <span id="shelfRSkuCount" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>今日已上架SKU总数: <span id="shelfRSkuSum" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+						<tr>
+							<td>今日未上架SKU个数: <span id="shelfWSkuCount" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>今日未上架SKU总数: <span id="shelfWSkuSum" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+					</table>
+					<span style="color: #000;padding:10px;margin-top: 5px;float:right;border:1px solid #eee;font-size:12px;margin-right:50px;">
+						<em style="font-weight:bold;font-size:13px;">上架差值说明：</em><br>
+						负差值：实际上架数量大于应上架数量，之前有遗留未上架数量在当天上架 <br>
+						正差值：实际上架数量小于应上架数量，当天有遗留未上架数量<br>
+						零差值：实际上架数量等于应上架数量，当天全部上完 <br>
+					</span>
+					<div style="clear:both;"></div>
+				</span>
+			</div>
+			<div class="panel-block shelve-block">
+				<div id="shelvesLogCharts" style="margin: 10px auto;width: 100%;height: 590px;min-width: 1500px;"></div>
+			</div>
+		</div>
+		<div title="明细" style="padding: 10px;">
+			<div class="tab-head-two">
+				<span class="receipt-all-number" style="color:#333;display:block;font-size:14px;margin-left:0;margin-bottom:15px;">
+					<table>
+						<tr>
+							<td>应上架sku个数:<span id="skurCountShelve1" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>应上架sku总数:<span id="skuShelfSum1" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+						<tr>
+							<td>已上架SKU个数:<span id="shelfRSkuCount1" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>已上架SKU总数:<span id="shelfRSkuSum1" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+						<tr>
+							<td>未上架SKU个数:<span id="shelfWSkuCount1" style="color:#57c5f7;"> 0 </span>&nbsp;&nbsp;&nbsp;&nbsp;</td>
+							<td>未上架SKU总数:<span id="shelfWSkuSum1" style="color:#57c5f7;"> 0 </span></td>
+						</tr>
+					</table>        
+				</span>
+				<div>
+					<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+					<input id="shelvesTime" class="form-date" placeholder="选择时间">
+					<input id="shelvesLineCode" class="easyui-textbox" prompt="条形码">
+					<input id="shelvesUserNumber" class="easyui-textbox" prompt="操作账号">
+					<input id="shelvesStatus" class="easyui-combobox" prompt="上架状态">
+					<button class="btn-34 info" onclick="shelvesLog.methods.searchShelvesLogList()"><i class="fa fa-search"></i></button>
+				</div>
+			</div>
+			<div id="recriptLogList" style="margin: 10px auto;width: 100%;">
+				<table id="shelvesTable" style="width: 100%;"></table> 
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var editIndex = undefined 
+		var shelvesLog = {
+			data: {
+				shelvesLogList: [] // 上架统计列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.shelveslog-head .tab-head-one #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+							$('.shelveslog-head .tab-head-two #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 选择时间
+					$('#batchReceiptStatus2').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: 0,
+							text: '今天'
+						}, {
+							id: 1,
+							text: '最近三天'
+						}, {
+							id: 2,
+							text: '最近一周'
+						}, {
+							id: 3,
+							text: '最近两周',
+							selected: true
+						}, {
+							id: 4,
+							text: '自定义时间'
+						}],
+						onSelect: function (rec) {
+							// 当为自定义时间的时候 显示时间插件，否则不显示
+							if(rec.id == 4){
+								$('#chooseSheTime').show()
+								// 自定义时间段
+								$('#chooseSheTime').daterangepicker(
+									timeControlCode(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0)),
+								).on('cancel.daterangepicker', function(ev, picker) {
+									$(this).val('')
+								})
+								$('#chooseSheTime').val('') // 清空创建时间信息
+							}else{
+								$('#chooseSheTime').hide()
+							}
+						}
+					})
+
+					// 收货单创建时间
+					$('#shelvesTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					})
+					// $('#shelvesTime').val('') // 清空创建时间信息
+
+					// 上架状态
+					$('#shelvesStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '上架状态'
+						}, {
+							id: 1,
+							text: '已上架'
+						}, {
+							id: 2,
+							text: '待上架'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					shelvesLog.methods.searchShelvesLogEchart() // 上架统计图表
+					shelvesLog.methods.searchShelvesLogList()  // 上架明细列表
+				},
+
+				// 今日数据展示（统计）
+				todayDataShow: function () {
+					requestJsonServer('/report/batchreceipt/shelf/count', 'get', {
+						storehouseId: $('.shelveslog-head .tab-head-one #storehouseId').val(), // 仓库
+						createBegainTime: (new Date(new Date().toLocaleDateString()).getTime()) / 1000,
+						createEndTime: parseInt(((new Date().getTime()) / 1000).toFixed(0))
+					}).then(res => {
+						const resultData = res.datas
+						const persertShow = (value1, value2) => {
+							const newData = (value1 / value2) * 100
+							if( newData == 0) {
+								if(value1 == 0) {
+									return 0
+								}else{
+									return 100
+								}
+							}
+							if( value2 == 0 && newData == 0 ) {
+								return 100
+							}
+							if( isNaN(newData)){
+								return 0.00
+							}
+							if(newData > 0 && newData < 0.01 ){
+								return 0.01
+							}
+							if( newData > 99.99  && newData < 100){
+								return 99.99
+							}
+							return newData == 100 ? 100 : newData.toFixed(2)
+						}
+						$('#skuShelfSum').text( (resultData.skuSum + resultData.rxSkuSum)) // 今日统计的展示
+						$('#skurCountShelve').text( (resultData.skuCount + resultData.rxSkuCount)) // 今日统计的展示
+						$('#shelfRSkuSum').text( resultData.shelfRSkuSum + '个') // 今日已上架统计展示
+						$('#shelfRSkuCount').text(resultData.shelfRSkuCount + '个') // 今日已上架统计展示
+						$('#shelfWSkuSum').text( (resultData.skuSum + resultData.rxSkuSum - resultData.shelfRSkuSum) + '个') // 今日未上架统计展示
+						$('#shelfWSkuCount').text((resultData.skuCount + resultData.rxSkuCount - resultData.shelfRSkuCount) + '个') // 今日未上架统计展示
+					}).catch(error => {
+
+					})
+				},
+
+				// 今日数据展示（明细）
+				todayDataShow1: function () {
+					let newTimeDate = $('#shelvesTime').val() // 获取创建时间
+					requestJsonServer('/report/batchreceipt/shelf/count', 'get', {
+						storehouseId: $('.shelveslog-head .tab-head-two #storehouseId').val(), // 仓库
+						createBegainTime: timestamp(newTimeDate.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(newTimeDate.substring(19, 35)), // 创建结束时间
+						productSkuBarcode : $('#shelvesLineCode').val(), // 条形码
+						createdBy: $('#shelvesUserNumber').val(), // 操作账号
+					}).then(res => {
+						const resultData = res.datas
+						const persertShow = (value1, value2) => {
+							const newData = (value1/value2)*100
+							if( newData == 0) {
+								if(value1 == 0) {
+									return 0
+								}else{
+									return 100
+								}
+							}
+							if( value2 == 0 && newData == 0 ) {
+								return 100
+							}
+							if( isNaN(newData)){
+								return 0.00
+							}
+							if(newData > 0 && newData < 0.01 ){
+								return 0.01
+							}
+							if( newData > 99.99  && newData < 100){
+								return 99.99
+							}
+							return newData == 100 ? 100 : newData.toFixed(2)
+						}
+						$('#skuShelfSum1').text((resultData.skuSum + resultData.rxSkuSum)) // 当前时间节点的展示
+						$('#skurCountShelve1').text((resultData.skuCount + resultData.rxSkuCount)) // 当前时间节点的展示
+						$('#shelfRSkuSum1').text( resultData.shelfRSkuSum + '个') // 当前时间节点的展示
+						$('#shelfRSkuCount1').text(resultData.shelfRSkuCount + '个') // 当前时间节点的展示
+						$('#shelfWSkuSum1').text( (resultData.skuSum + resultData.rxSkuSum - resultData.shelfRSkuSum) + '个') // 当前时间节点的展示
+						$('#shelfWSkuCount1').text((resultData.skuCount + resultData.rxSkuCount - resultData.shelfRSkuCount) + '个') // 当前时间节点的展示
+					}).catch(error => {
+
+					})
+				},
+
+				// 上架统计图表
+				searchShelvesLogEchart: function () {
+					showLoading()
+					// 展示今日数据（统计）
+					shelvesLog.methods.todayDataShow()
+					var newTime = (new Date(new Date().toLocaleDateString()).getTime())/1000,nowTime =parseInt(((new Date().getTime())/1000).toFixed(0));
+					var chartTimeId = $('#batchReceiptStatus2').val()
+					var startTime = '',endtime = nowTime;
+					if(chartTimeId == 0){ // 今天
+						startTime = newTime
+					}else if(chartTimeId == 1){ // 最近三天
+						startTime = newTime - (24*60*60*2)
+					}else if(chartTimeId == 2){ // 最近一周
+						startTime = newTime - (24*60*60*6)
+					}else if(chartTimeId == 3){
+						startTime = newTime - (24*60*60*13)
+					}else if(chartTimeId == 4){
+						startTime =  timestamp($('#chooseSheTime').val().substring(0, 16))
+						endtime =  timestamp($('#chooseSheTime').val().substring(19, 35))
+					}
+					// 请求数据接口返回数据
+					requestJsonServer('/report/batchreceipt/shelf/time/count/', 'get', {
+						storehouseId: $('.shelveslog-head .tab-head-one #storehouseId').val(), // 仓库
+						createBegainTime : startTime,
+						createEndTime:endtime 
+					}).then(res => {
+						hideLoading()
+						// 直接调用图表请求的方法,将数据传过去
+						shelvesLog.methods.chartsDataShow(res.datas,chartTimeId)
+					}).catch(error => {
+
+					})
+				},
+				
+				// 图表统计数据展示
+				ajaxEchart: function (newxAxisArray,newyAxisArray,newyAxisArray2,newyAxisArray3) {
+					var myChartShe = echarts.init(document.getElementById("shelvesLogCharts"));
+					myChartSheoption = {
+						tooltip: {
+							trigger: 'axis'
+						},
+						legend: {
+							data: ['应上sku总数', '已上架sku总数', '上架差值']
+						},
+						// 直角坐标系内绘图网格
+						grid: [{
+							show: true,
+							top: 45,
+							right: 45,
+							bottom: 45,
+							left: 45
+						}],
+						calculable: true,
+						xAxis: [
+							{
+								type: 'category',
+								name: '日期',
+								data: newxAxisArray
+							}
+						],
+						yAxis: [
+							{
+								type: 'value',
+								name: 'sku总数'
+							}
+						],
+						series: [
+							{
+								name: '应上sku总数',
+								type: 'bar',
+								barGap: 0,
+								barWidth: 30,
+								itemStyle: {
+									color: 'rgba(0, 204, 255, 0.5)'
+								},
+								label: {
+									show: true,
+									position: 'top',
+									color:'rgba(0, 204, 255, 0.5)'
+								},
+								data: newyAxisArray3
+							},
+							{
+								name: '已上架sku总数',
+								type: 'bar',
+								itemStyle: {
+									color: '#39f'
+								},
+								barGap: 0,
+								// stack: 'sku',
+								label: {
+									show: true,
+									position: 'top'
+								},
+								barWidth:30,
+								data: newyAxisArray
+							},
+							{
+								name: '上架差值',
+								type: 'bar',
+								// stack: 'sku',
+								barGap: 0,
+								barWidth: 30,
+								itemStyle: {
+									color: '#f50'
+								},
+								label: {
+									show: true,
+									position: 'top',
+									formatter: function (params) {
+										return params.data.name
+									}
+								},
+								data: newyAxisArray2
+							}
+						]
+					};
+
+					if (myChartSheoption && typeof myChartSheoption === "object") {
+						myChartShe.setOption(myChartSheoption, true);
+					}
+					
+					// 窗口变化
+					window.onresize = function () {
+						setTimeout(function () {
+							myChartShe.resize()
+						}, 200)
+					}
+				},
+
+				chartsDataShow: function (resultData,chartTimeId) {
+					// 对传过来的数据进行处理
+					const newxAxisArray = [],newyAxisArray = [],newyAxisArray2=[],newyAxisArray3=[];
+					if(resultData.length <= 0 || resultData == 'undefined'){
+						message('success', '暂无数据')
+					}else{
+						for(var i = 0;i< resultData.length;i++){
+							newxAxisArray.push(resultData[i].time)
+							newyAxisArray.push(resultData[i].shelfRSkuSum)
+							newyAxisArray2.push({
+								"name": resultData[i].shelfWSkuSum ,
+								"value": Math.abs(resultData[i].shelfWSkuSum)
+							})
+							newyAxisArray3.push(resultData[i].skuShelfSum)
+						}
+						// 处理特殊数组中的数据
+						if(chartTimeId != 4){
+							// x 轴加颜色
+							newxAxisArray.push({
+								value: newxAxisArray.pop() ,
+								textStyle:{
+									color: '#0c6'
+								}
+							})
+							// y 轴加颜色
+							newyAxisArray.push({
+								value: newyAxisArray.pop() ,
+								itemStyle:{
+									color: '#0c6'
+								}
+							})
+							// y 轴加颜色  待收货sku
+							// newyAxisArray2.push({
+							// 	value: newyAxisArray2.pop() ,
+							// 	itemStyle:{
+							// 		color: 'rgba(0, 204, 102, 0.4)'
+							// 	}
+							// })
+							// y 轴加颜色  sku总数
+							newyAxisArray3.push({
+								value: newyAxisArray3.pop() ,
+								itemStyle:{
+									color: '#0c6'
+								}
+							})
+						}
+					}
+					shelvesLog.methods.ajaxEchart(newxAxisArray,newyAxisArray,newyAxisArray2,newyAxisArray3)
+				},
+				
+				// 上架明细列表
+				searchShelvesLogList: function(){
+					var time = $('#shelvesTime').val() // 获取创建时间
+					if(time == ''){
+						$.messager.alert('提醒', '请选择时间!');
+						return false
+					}
+					// 今日数据展示（明细）
+					shelvesLog.methods.todayDataShow1()
+					$('#shelvesTable').height($(window).height() - $('.shelveslog-head .tab-head-two').height() - 220)
+					$('#shelvesTable').datagrid({
+						method: 'GET',
+						url: host() + '/report/batchreceipt/shelf/list', //上架
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.shelveslog-head .tab-head-two #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(time.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(time.substring(19, 35)), // 创建结束时间
+							productSkuBarcode : $('#shelvesLineCode').val(), // 条形码
+							createdBy: $('#shelvesUserNumber').val(), // 操作账号
+							productSkuBarcodeStatus: $('#shelvesStatus').val() // 上架状态
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							shelvesLog.data.shelvesLogList = data.datas.content
+							$('#shelvesTable').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width:40,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuImage',
+								title: '商品图',
+								width: 60,
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规则名称',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'updatedBy',
+								title: '操作账号',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'productSkuBarcodeStatus',
+								title: '上架状态',
+								width: 50,
+								formatter: function (value, row, index) {
+									if(value == 1){
+										return `<div style="color:#0c6;">已上架</div>`
+									}else if(value == 2){
+										return `<div style="color:#f50;">待上架</div>`
+									}else{
+										return `<div style="color:#ccc;">未知状态</div>`
+									}
+								}
+							}, {
+								field: 'createdTime',
+								title: '创建时间',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? timeFormat(value) : '--'}</div>`
+								}
+							},  {
+								field: 'updatedTime',
+								title: '更新时间',
+								width: 60,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? timeFormat(value) : '--'}</div>`
+								}
+							}]
+						],
+						onDblClickCell: function(index,field,value){
+							if (editIndex == undefined) {
+								if(field == "comments"){
+									$(this).datagrid('beginEdit', index);
+									var that = $(this)
+									var ed = $(this).datagrid('getEditor', {index:index,field:field});
+									$(ed.target).focus();
+									$(ed.target).bind('blur',function(e){
+										that.datagrid('endEdit',index);  
+										editIndex = undefined;
+									})
+								}
+							}else if(editIndex != undefined){ // 如果不相等，说明已经打开编辑器了，需要关闭编辑器
+								$(this).datagrid('endEdit', editIndex);  
+								editIndex = undefined;
+							}
+						},
+						onAfterEdit:function(index, row, changes){ // 关闭编辑器后触发
+							var updated = $(this).datagrid('getChanges', 'updated');  // updated 是一个getChanges的属性，可以查看api
+							if (updated.length < 1) {  // 如果编辑器中的数据已经修改，则length为1，否则为0，判断是否已经修改数据
+								editRow = undefined;  
+								$(this).datagrid('unselectAll');  
+								return;  
+							}
+						},
+						onLoadSuccess: function (param) {
+							
+						}
+					})
+					$('#shelvesTable').datagrid('scrollTo', 0)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				shelvesLog.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			shelvesLog.init()
+		})
+	</script>
+</body>
+
+</html>

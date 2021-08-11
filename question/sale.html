@@ -1,0 +1,397 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>清卖</title>
+</head>
+
+<body>
+	<div class="super-theme-example sale-head">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="productId" class="easyui-textbox" prompt="商品ID">
+			<input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+			<input id="productSkuName" class="easyui-textbox" prompt="规格名称">
+			<input id="type" name="type" class="easyui-combobox" prompt="来源">
+			<button class="btn-34 info" onclick="sale.methods.searchSaleList()"><i class="fa fa-search"></i></button>
+		</div>
+    </div>
+
+	<!--清卖列表-->
+	<div class="panel-block">
+		<table id="saleList" style="width: 100%"></table>
+	</div>
+
+	<!--清卖日志弹框-->
+	<div id="saleLogDialog" class="easyui-dialog" title="清卖日志" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#saleLogBtn',modal: true,closed: true">
+		<table id="saleLogLists" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="saleLogBtn">
+		<button class="btn large" onclick="$('#saleLogDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="saleImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#saleImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="saleImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="saleImgBtn">
+		<button class="btn large" onclick="$('#saleImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var sale = {
+			data: {
+				saleList: [], // 清卖列表
+				saleLogList: [] // 清卖日志列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.sale-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 来源
+					$('.sale-head #type').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '0',
+							text: '问题件',
+							selected: true
+						}, {
+							id: '1',
+							text: '退货'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+				},
+
+				// 查询
+				searchSaleList: function () {
+					sale.methods.getSaleList('scrollTo') // 获取清卖列表
+				},
+
+				// 获取清卖列表
+				getSaleList: function (scrollTo) {
+                    $('#saleList').height($(window).height() - $('.sale-head').height() - 190)
+					$('#saleList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/rejection/sku/clean/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.sale-head #storehouseId').val(), // 仓库
+                            productId: $('.sale-head #productId').val(), // 商品ID
+                            productSkuBarcode: $('.sale-head #productSkuBarcode').val(), // 条形码
+                            productSkuName: $('.sale-head #productSkuName').val(), // 规格名称
+							type: $('.sale-head #type').val() // 来源
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							sale.data.saleList = data.datas.content
+							if (scrollTo == 'scrollTo') {
+								$('#saleList').datagrid('scrollTo', 0)
+							}
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						checkOnSelect: false, // 点击复选框才会选中
+						selectOnCheck: false, // 选中该行将不会选中复选框
+						columns: [
+							[{
+								field: 'productId',
+								title: '商品ID',
+								width: 30,
+								formatter: function (value, row, index) {
+									return `<div class="table-center">${value ? value : ''}</div>`
+								}
+							}, {
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="sale.methods.bigImg(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'inventory',
+								title: '库存',
+								width: 100
+							}, {
+								field: 'returnCount',
+								title: '退货次数',
+								width: 100
+							}, {
+								field: 'type',
+								title: '来源',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 0) {
+										html = `<div>问题件</div>`
+									} else if (value == 1) {
+										html = `<div>退货</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="btn success" onclick="sale.methods.saleLogDialog(${index})">日志</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+							// 分页时候滚动条置顶
+							$("#saleList").datagrid("getPager").pagination({
+								onSelectPage: function (pageNumber, pageSize) {
+									$('#saleList').datagrid({pageNumber: pageNumber})
+									$('#saleList').datagrid("reload") // 获取库存列表
+									$('#saleList').datagrid('scrollTo', 0)
+								}
+							})
+						}
+					})
+				},
+				
+				// 清卖日志列表
+				saleLogDialog: function (index) {
+					var obj = sale.data.saleList[index]
+					$('#saleLogDialog').dialog('open')
+					$('#saleLogLists').datagrid({
+						method: 'GET',
+						url: host() + '/log/clean/inventory',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: obj.storehouseId,
+							inventoryId: obj.id
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							sale.data.saleLogList = data.datas.content // 清卖日志列表
+							$('#saleLogLists').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'product_sku_image',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div>
+													<img class="table-colums-img" onclick="sale.methods.bigImg1(${index})" src="${value}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'product_name',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'product_sku_name',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'product_sku_barcode',
+								title: '条形码',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'event_name',
+								title: '事件',
+								width: 100
+							}, {
+								field: 'change_comments',
+								title: '备注',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value ? value : '--'}</div>`
+								}
+							}, {
+								field: 'before_inventory',
+								title: '变更前库存',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'after_inventory',
+								title: '变更后库存',
+								width: 80,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${row.after_inventory - row.before_inventory}</div>`
+								}
+							}, {
+								field: 'created_by',
+								title: '操作人',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+				// 查看大图
+				bigImg: function (index) {
+					var obj = sale.data.saleList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productName}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#saleImg').attr('src', obj.productSkuImage)
+					$('#saleImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（清卖日志）
+				bigImg1: function (index) {
+					var obj = sale.data.saleLogList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.product_sku_barcode}</div>
+									<div>${obj.product_name}</div>
+									<div>${obj.product_sku_name}</div>
+								</div>`
+					$('#saleImg').attr('src', obj.product_sku_image)
+					$('#saleImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				sale.methods.initSearch() // 初始化条件查询
+				sale.methods.getSaleList() // 获取清卖列表
+			}
+		} 
+
+		// 初始化
+		$(function () {
+			sale.init()
+		})
+	</script>
+</body>
+
+</html>

@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>问题件</title>
+	<style>
+		.edit-img{
+			max-width:100%;
+		}
+	</style>
+</head>
+
+<body>
+	<div class="super-theme-example question-head">
+		<div class="super-theme-btn">
+            <div class="download-head">
+				<button data-value="PHOTO_UPLOAD" class="btn success hide">导入问题件图片</button>
+				<input type="file" accept="image/*" multiple onchange="question.methods.importQuestionImg(this)" />
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="createTime" class="form-date" placeholder="创建时间">
+            <input id="updateTime" class="form-date" placeholder="更新时间">
+            <input id="returnNumber" class="easyui-textbox" prompt="退货单号">
+            <input id="productSkuBarcode" class="easyui-textbox" prompt="条形码">
+            <input id="tel" class="easyui-textbox" prompt="买家电话">
+            <input id="comment" class="easyui-textbox" prompt="备注">
+            <input id="status" name="status" class="easyui-combobox" prompt="状态">
+			<button class="btn-34 info" onclick="question.methods.searchQuestionList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--问题件列表-->
+	<div class="panel-block">
+		<table id="questionList" style="width: 100%"></table>
+	</div>
+
+	<!--编辑问题件弹框-->
+	<div id="editQuestionDialog" class="easyui-dialog" title="编辑问题件" style="width: 400px;height: 700px" data-options="buttons: '#editQuestionBtn',modal: true,closed: true">
+		<div class="form-dialog" id="editQuestionForm">
+			<input type="text" name="storehouseId" hidden>
+			<input type="text" name="id" hidden>
+			<input type="text" name="changeType" value="4" hidden>
+			<div class="form-item">
+				<label class="label-top">退货单号：</label>
+				<input type="text" name="returnNumber" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">规格名称：</label>
+				<input type="text" name="productSkuName" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">条形码：</label>
+				<input type="text" name="productSkuBarcode" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">数量 *：</label>
+				<input type="number" name="quantity" class="form-input">
+			</div>
+			<div class="form-item">
+				<label class="label-top">买家电话：</label>
+				<input type="text" name="tel" class="form-input">
+			</div>
+			<div class="form-item label-textarea">
+				<label class="label-top">备注：</label>
+				<textarea name="comment" class="form-textarea"></textarea>
+			</div>
+			<!-- <div class="form-item">
+				<label class="label-top">问题图片：</label>
+				<div style="display: inline-block;">
+					<div class="download-head">
+						<button class="btn success">更改问题件图片</button>
+						<input type="file" name="image" accept="image/*" multiple onchange="question.methods.updateQuestionImg(this)" />
+					</div>
+					<div id="edit-img">
+
+					</div>
+				</div>
+			</div> -->
+		</div>
+	</div>
+	<div id="editQuestionBtn">
+		<button class="btn large" onclick="$('#editQuestionDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="question.methods.editQuestion()">修改</button>
+	</div>
+
+	<!--转待上架弹框-->
+	<div id="turnShelfDialog" class="easyui-dialog" title="转待上架" style="width: 400px;height: 200px" data-options="buttons: '#turnShelfBtn',modal: true,closed: true">
+		<div class="form-dialog" id="turnShelfForm">
+			<input type="text" name="storehouseId" hidden>
+			<input type="text" name="id" hidden>
+			<input type="text" name="changeType" value="1" hidden>
+			<div class="form-item">
+				<label class="label-top">数量 *：</label>
+				<input type="number" name="quantity" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="turnShelfBtn">
+		<button class="btn large" onclick="$('#turnShelfDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="question.methods.turnShelf()">修改</button>
+	</div>
+
+	<!--转待清卖弹框-->
+	<div id="turnSaleDialog" class="easyui-dialog" title="转待清卖" style="width: 400px;height: 200px" data-options="buttons: '#turnSaleBtn',modal: true,closed: true">
+		<div class="form-dialog" id="turnSaleForm">
+			<input type="text" name="storehouseId" hidden>
+			<input type="text" name="id" hidden>
+			<input type="text" name="changeType" value="2" hidden>
+			<div class="form-item">
+				<label class="label-top">数量 *：</label>
+				<input type="number" name="quantity" class="form-input">
+			</div>
+		</div>
+	</div>
+	<div id="turnSaleBtn">
+		<button class="btn large" onclick="$('#turnSaleDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="question.methods.turnSale()">修改</button>
+	</div>
+
+	<!--商品图片弹框-->
+	<div id="questionImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#questionImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left" id="questionImg">
+				
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+	</div>
+	<div id="questionImgBtn">
+		<button class="btn large" onclick="$('#questionImgDialog').dialog('close')">关闭</button>
+	</div>
+
+	<script type="text/javascript">
+		var question = {
+			data: {
+				questionList: [], // 问题件列表
+				dataImage: []
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+                    // 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.question-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 创建时间
+					$('.question-head #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+
+					// 更新时间
+					$('.question-head #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+                    $('.question-head #updateTime').val('')
+                    
+                    // 状态
+					$('.question-head #status').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+                            id: '',
+                            text: '状态'
+                        }, {
+							id: '0',
+							text: '待确认'
+						}, {
+							id: '1',
+							text: '已确认'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					question.methods.getQuestionList() // 获取问题件列表
+				},
+
+				// 查询
+				searchQuestionList: function () {
+					question.methods.getQuestionList() // 获取未上架列表
+				},
+
+				// 获取问题件列表
+				getQuestionList: function () {
+					var createTime = $('.question-head #createTime').val()
+					var updateTime = $('.question-head #updateTime').val()
+					$('#questionList').height($(window).height() - $('.question-head').height() - 180)
+					$('#questionList').datagrid({
+						method: 'GET',
+						url: host() + '/storehouse/rejection/sku/question/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+                            // 其他参数
+                            storehouseId: $('.question-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+							updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+                            updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+                            returnNumber: $('.question-head #returnNumber').val(), // 退货单号
+							productSkuBarcode: $('.question-head #productSkuBarcode').val(), // 条形码
+							tel: $('.question-head #tel').val(), // 买家电话
+							comment: $('.question-head #comment').val(), // 备注
+							status: $('.question-head #status').val() // 状态
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							question.data.questionList = data.datas.content
+							$('#questionList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productQuestionImage',
+								title: '问题图片',
+								formatter: function (value, row, index) {
+									let imgValue = value.split(",")
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="question.methods.bigImg(${index}, 1)" src="${imgValue[0]}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="question.methods.bigImg(${index}, 2)" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productName',
+								title: '商品名称',
+								width: 100
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = `<div>${value}</div>`
+									return html
+								}
+							}, {
+								field: 'tel',
+								title: '买家电话',
+								width: 100
+							}, {
+								field: 'comment',
+								title: '备注',
+								width: 200
+							}, {
+								field: 'storehouseName',
+								title: '仓库',
+								width: 100
+							}, {
+								field: 'createdAt',
+								title: '创建时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'updatedAt',
+								title: '更新时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value)}</div>`
+								}
+							}, {
+								field: 'updatedBy',
+								title: '更新账号',
+								width: 100
+							}, {
+								field: 'createdBy',
+								title: '创建账号',
+								width: 100
+							}, {
+								field: 'returnNumber',
+								title: '退货单号',
+								width: 100
+							}, {
+								field: 'status',
+								title: '状态',
+								width: 80,
+								formatter: function (value, row, index) {
+									var html = ''
+									if (value == 0) {
+										html = `<div class="error-msg">待确认</div>`
+									} else if (value == 1) {
+										html = `<div class="success-msg">已确认</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 350,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button data-value="QUESTION_EDIT" class="btn info hide" onclick="question.methods.editQuestionDialog(${JSON.stringify(row).replace(/"/g,"'")})">编辑</button>
+													<button data-value="TURN_SHELF" class="btn error hide" onclick="question.methods.turnShelfDialog(${JSON.stringify(row).replace(/"/g,"'")})">转待上架</button>
+													<button data-value="TURN_SALE" class="btn error hide" onclick="question.methods.turnSaleDialog(${JSON.stringify(row).replace(/"/g,"'")})">转待清卖</button>
+													<button class="btn success" onclick="question.methods.printBarCodeDialog(${index})">打印</button>
+													<button data-value="QUESTION_DELETE" class="btn error hide" onclick="question.methods.deleteQuestion(${index})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+                
+                // 导入问题件图片
+                importQuestionImg: function (e) {
+                    var files = $(e).context.files
+                    var fileList = []
+                    if (files.length) {
+                        showLoading()
+                        for (let i = 0; i < files.length; i++) {
+                            fileList.push(files[i])
+                        }
+                        requestFileServer('/storehouse/rejection/sku/question/image', 'POST', {images: fileList}).then((response) => {
+                            if (response.code == 1) {
+                                question.methods.getQuestionList() // 获取问题件列表
+                            } else if (response.code == -1 || response.code == -3) {
+                                loginOut()
+                            } else {
+                                message('error', response.message)
+                            }
+                            e.value = '' // 清空
+                            hideLoading()
+                        }).catch((error) => {
+                            e.value = '' // 清空
+                            hideLoading()
+                        })
+                    }
+                },
+
+				// 编辑问题件弹框
+				editQuestionDialog: function (row) {
+					$('#editQuestionDialog').dialog('open')
+					$('#editQuestionForm').find("input[name='storehouseId']").val(row.storehouseId)
+					$('#editQuestionForm').find("input[name='id']").val(row.id)
+					$('#editQuestionForm').find("input[name='changeType']").val(4)
+					$('#editQuestionForm').find("input[name='returnNumber']").val(row.returnNumber)
+					$('#editQuestionForm').find("input[name='productSkuName']").val(row.productSkuName)
+					$('#editQuestionForm').find("input[name='productSkuBarcode']").val(row.productSkuBarcode)
+					$('#editQuestionForm').find("input[name='tel']").val(row.tel)
+					$('#editQuestionForm').find("textarea[name='comment']").val(row.comment)
+					$('#editQuestionForm').find("input[name='quantity']").val(row.quantity)
+					let imgArray = ''
+					row.productQuestionImage.split(',').reverse().map((item, index) =>{
+						imgArray += '<img class="edit-img" src="'+ item +'" style="max-width:350px;">'
+					})
+					$('#editQuestionForm').find('#edit-img').html(imgArray)
+				},
+				// 编辑问题件
+				editQuestion: function () {
+					var parame = getParams('#editQuestionForm')
+					let files = []
+					// var files = $("input[name='image']").prop('files')[0] || ''
+					parame.image = question.data.dataImage
+					if (!parame.quantity || parame.quantity <= 0) {
+						message('error', '数量不能为空')
+						return false
+					}
+					showLoading()
+					requestFileServer('/storehouse/rejection/sku/question/edit', 'POST', parame).then((response) => {
+						if (response.code == 1) {
+							message('success', '修改成功')
+							$('#editQuestionForm').form('clear')
+							$('#editQuestionDialog').dialog('close')
+							$('#questionList').datagrid("reload"); // 获取问题件列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 更换问题件图片
+				updateQuestionImg: function (e) {
+					// 上传单个图片
+					// var files = $(e).context.files[0]
+					// var reader = new FileReader()
+					// if (files) {
+					// 	reader.readAsDataURL(files)
+					// 	reader.onload = function (e) {
+					// 		$('#editQuestionForm').find("img").attr('src', e.target.result)
+					// 	}
+					// }
+					// 上传多个图片
+					let files = $(e).context.files, fileList = ''
+					if(files.length > 0){
+						$('#edit-img').html('')
+						for (let i = 0; i < files.length; i++) {
+							// fileList.push(files[i])
+							question.data.dataImage.push(files[i])
+							let newReader = new FileReader()
+							newReader.readAsDataURL(files[i])
+							newReader.onload = function(e){
+								$('#edit-img').append('<img class="edit-img" src="'+ e.target.result +'" style="max-width:350;">')
+							}
+						}
+					}
+
+				},
+
+				// 转待上架弹框
+				turnShelfDialog: function (row) {
+					if (row.status == 1) {
+						$('#turnShelfDialog').dialog('open')
+						$('#turnShelfForm').find("input[name='storehouseId']").val(row.storehouseId)
+						$('#turnShelfForm').find("input[name='id']").val(row.id)
+						$('#turnShelfForm').find("input[name='changeType']").val(1)
+						$('#turnShelfForm').find("input[name='quantity']").val(row.quantity)
+					} else {
+						message('error', '请先完善问题件信息')
+					}
+				},
+
+				// 转待上架
+				turnShelf: function () {
+					var parame = getParams('#turnShelfForm')
+					if (!parame.quantity || parame.quantity <= 0) {
+						message('error', '数量不能为空')
+						return false
+					}
+					showLoading()
+					requestServer('/storehouse/rejection/sku/question/change', 'POST', [parame]).then((response) => {
+						if (response.code == 1) {
+							message('success', '转待上架成功')
+							$('#turnShelfForm').form('clear')
+							$('#turnShelfDialog').dialog('close')
+							$('#questionList').datagrid("reload"); // 获取问题件列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 转待清卖弹框
+				turnSaleDialog: function (row) {
+					if (row.status == 1) {
+						$('#turnSaleDialog').dialog('open')
+						$('#turnSaleForm').find("input[name='storehouseId']").val(row.storehouseId)
+						$('#turnSaleForm').find("input[name='id']").val(row.id)
+						$('#turnSaleForm').find("input[name='changeType']").val(2)
+						$('#turnSaleForm').find("input[name='quantity']").val(row.quantity)
+					} else {
+						message('error', '请先完善问题件信息')
+					}
+				},
+
+				// 转待清卖
+				turnSale: function () {
+					var parame = getParams('#turnSaleForm')
+					if (!parame.quantity || parame.quantity <= 0) {
+						message('error', '数量不能为空')
+						return false
+					}
+					showLoading()
+					requestServer('/storehouse/rejection/sku/question/change', 'POST', [parame]).then((response) => {
+						if (response.code == 1) {
+							message('success', '转待清卖成功')
+							$('#turnSaleForm').form('clear')
+							$('#turnSaleDialog').dialog('close')
+							$('#questionList').datagrid("reload"); // 获取问题件列表
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 删除
+				deleteQuestion: function (index) {
+					var obj = question.data.questionList[index]
+					$.messager.confirm('确认', '您确认删除？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/storehouse/rejection/sku/question/change', 'POST', [{
+								storehouseId: obj.storehouseId,
+								id: obj.id,
+								changeType: 3
+							}]).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#questionList').datagrid("reload"); // 获取问题件列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+
+				// 打印
+				printBarCodeDialog: function (index) {
+					var obj = JSON.parse(JSON.stringify(question.data.questionList[index]))
+					if (obj.status == 1) {
+						// 打印
+						obj.originalQuantity = obj.quantity
+						obj.shelveQuantity = 0
+						printProductTag(obj)
+					} else {
+						message('error', '请先完善商品信息')
+					}
+				},
+
+                // 查看大图
+				bigImg: function (index, status) {
+					var obj = question.data.questionList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode || ''}</div>
+									<div>${obj.productName || ''}</div>
+									<div>${obj.productSkuName || ''}</div>
+								</div>`
+					if(status == 1){
+						let imgArray = ''
+						obj.productQuestionImage.split(',').reverse().map((item, index) =>{
+							imgArray += '<img src="'+ item +'" style="width:100%;">'
+						})
+						$('#questionImg').html(imgArray)
+					}else{
+						$('#questionImg').html('<img src="'+ obj.productSkuImage +'" style="width:100%;">')
+					}
+					// $('#questionImg').attr('src', `${status == 1 ? obj.productQuestionImage.split(',')[0] : obj.productSkuImage}`)
+					$('#questionImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				question.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			question.init()
+		})
+	</script>
+</body>
+
+</html>

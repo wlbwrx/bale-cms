@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>拣货拨次单</title>
+</head>
+
+<body>
+	<div class="super-theme-example pick-head">
+		<div class="super-theme-btn">
+			<div class="see-head">
+				<button class="btn success" onclick="pick.methods.seePickDialog()">查看统计</button>
+			</div>
+			<div class="download-head">
+				<button data-value="PICK_ADD" class="btn success hide" onclick="pick.methods.createPickDialog()">创建拣货拨次单</button>
+			</div>
+			<div class="download-head">
+				<button data-value="PICK_EXPORT" class="btn success hide" onclick="pick.methods.pickAllExport()">导出</button>
+			</div>
+		</div>
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="timeFrame" class="form-date" placeholder="时间范围">
+			<input id="waveCode" class="easyui-textbox" prompt="拣货拨次单号">
+			<input id="pickStatus" class="easyui-combobox" data-options='panelHeight:"auto"' prompt="状态">
+			<input id="createdBy" class="easyui-textbox" prompt="创建账号">
+			<input id="pickBy" class="easyui-textbox" prompt="认领账号">
+			<input id="scopeId" class="easyui-combobox" prompt="全部商城">
+			<button class="btn-34 info" onclick="pick.methods.searchPickList()"><i class="fa fa-search"></i></button>
+		</div>
+	</div>
+
+	<!--拣货拨次单列表-->
+	<div class="panel-block">
+		<table id="pickList" style="width: 100%"></table>
+	</div>
+
+	<!--查看统计-->
+	<div id="seePickDialog" class="easyui-dialog" title="查看统计" style="width: 700px;height: 700px;padding: 20px;" data-options="buttons: '#seePickBtn',modal: true,closed: true">
+		<div>
+			<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+			<input id="createTime" class="form-date" placeholder="创建时间">
+			<input id="updateTime" class="form-date" placeholder="更新时间">
+			<input id="createdBySon" class="easyui-textbox" prompt="创建账号">
+			<input id="pickBySon" class="easyui-textbox" prompt="认领账号">
+			<button class="btn-34 info" onclick="pick.methods.seePick()"><i class="fa fa-search"></i></button>
+		</div>
+		<div id="seePick" class="panel-log" style="width: 100%;height: 480px;margin-top: 20px;overflow: auto;"></div>
+	</div>
+	<div id="seePickBtn">
+		<button class="btn large" onclick="$('#seePickDialog').dialog('close')">关闭</button>
+	</div>
+
+	<!--创建拣货拨次单弹框-->
+	<div id="createPickDialog" class="easyui-dialog" title="创建拣货拨次单" style="width: 400px;height:430px;" data-options="buttons: '#createPickBtn',modal: true,closed: true">
+		<div class="form-dialog" id="createPickForm">
+			<div class="form-item">
+				<label class="label-top-110">设置发货单数量 *：</label>
+				<input type="number" name="invoiceCount" class="form-input" prompt="请输入发货单数量">
+			</div>
+			<div class="form-item">
+				<label class="label-top-110">仓库 *：</label>
+				<input id="storehouseId_" name="storehouseId" class="easyui-combobox">
+			</div>
+			<div class="form-item">
+				<label class="label-top-110">商城 *：</label>
+				<input id="scopeId" name="scopeId" class="easyui-combobox">
+			</div>
+			<div class="form-item">
+				<label class="label-top-110">物流 *：</label>
+				<input id="logisticsType" name="logisticsType" class="easyui-combobox">
+			</div>
+			<div class="form-item">
+				<label class="label-top-110">发货单类型 *：</label>
+				<input id="invoiceType" name="invoiceType" class="easyui-combobox">
+			</div>
+		</div>
+	</div>
+	<div id="createPickBtn">
+		<button class="btn large" onclick="$('#createPickDialog').dialog('close')">关闭</button>
+		<button class="btn large success" onclick="pick.methods.createPick()">创建</button>
+	</div>
+
+	<!--查看所有发货单弹框-->
+	<div id="pickAllDialog" class="easyui-dialog" title="发货单列表" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#pickAllBtn',modal: true,closed: true">
+        <table id="pickAllList" style="width: 100%;height: 100%;"></table>
+    </div>
+    <div id="pickAllBtn">
+		<button class="btn large" onclick="$('#pickAllDialog').dialog('close')">关闭</button>
+		<button data-value="PICK_PRINT" class="btn success large" onclick="pick.methods.printPick()">打印拣货拨次单</button>
+		<button data-value="PICK_PRINT" class="btn success large" onclick="pick.methods.printFaceSheet()">打印面单</button>
+	</div>
+	
+	<!--发货单明细弹框-->
+	<div id="invoiceDetailsDialog" class="easyui-dialog" title="发货单明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#invoiceDetailsBtn',modal: true,closed: true">
+		<table id="invoiceDetailsList" style="width: 100%;height: 100%;"></table>
+	</div>
+	<div id="invoiceDetailsBtn">
+		<button class="btn large" onclick="$('#invoiceDetailsDialog').dialog('close')">关闭</button>
+	</div>
+
+    <!--拣货拨次单明细弹框-->
+	<div id="pickDetailsDialog" class="easyui-dialog" title="拣货拨次单明细" style="width: 1200px;height: 700px;padding: 20px;" data-options="buttons: '#pickDetailsBtn',modal: true,closed: true">
+        <table id="pickDetailsList" style="width: 100%;height: 100%;"></table>
+    </div>
+    <div id="pickDetailsBtn">
+		<button class="btn large" onclick="$('#pickDetailsDialog').dialog('close')">关闭</button>
+    </div>
+
+    <!--商品图片弹框-->
+	<div id="pickImgDialog" class="easyui-dialog" title="商品图片" style="width: 1000px;height: 780px;padding: 20px;" data-options="buttons: '#pickImgBtn',modal: true,closed: true">
+		<div class="big-img">
+			<div class="big-img-left">
+				<img id="pickImg" src="" />
+			</div>
+			<div class="big-img-right">
+				
+			</div>
+		</div>
+    </div>
+    <div id="pickImgBtn">
+		<button class="btn large" onclick="$('#pickImgDialog').dialog('close')">关闭</button>
+    </div>
+
+	<script type="text/javascript">
+		var pick = {
+			data: {
+                pickList: [], // 拣货拨次单列表
+				pickDetailsList: [], // 拣货拨次单明细列表
+				storehouseId: '', // 当前要打印的拣货拨次单仓库
+				waveCode: '', // 当前要打印的拣货拨次单号
+				pickAllList: [], // 查看所有发货单列表
+				invoiceDetailsList: [], // 发货单明细商品列表
+				storehouseId_: '', // 创建拣货拨次单仓库
+				scopeId: '', // 创建拣货拨次单商城
+				logisticsType: '', // 创建拣货拨次单物流
+				invoiceType: '' // 创建拣货拨次单发货单类型
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.pick-head #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+							// 查看统计
+							$('#seePickDialog #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+							// 创建拣货拨次单
+							$('#createPickForm #storehouseId_').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 时间范围
+					$('.pick-head #timeFrame').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					})
+					
+					// 拣货状态
+					$('.pick-head #pickStatus').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '拣货状态'
+						}, {
+							id: 10,
+							text: '待拣货'
+						}, {
+							id: 20,
+							text: '已完成'
+						}, {
+							id: -10,
+							text: '已取消'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					// 商城
+					$('.pick-head #scopeId').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '0',
+							text: '全部商城',
+							selected :true
+						}, {
+							id: '18',
+							text: '折多多'
+						}, {
+							id: '8',
+							text: '阿噗特賣'
+						}, {
+							id: '17',
+							text: '测试'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+					pick.methods.getPickList() // 获取拣货拨次单列表
+				},
+
+				// 查询
+				searchPickList: function () {
+					pick.methods.getPickList() // 获取拣货拨次单列表
+				},
+
+				// 获取拣货拨次单列表
+				getPickList: function () {
+					var time = $('.pick-head #timeFrame').val()
+					$('#pickList').height($(window).height() - $('.pick-head').height() - 180)
+					$('#pickList').datagrid({
+						method: 'GET',
+						url: host() + '/wave/list',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.pick-head #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(time.substring(0, 16)), // 开始时间
+							createEndTime: timestamp(time.substring(19, 35)), // 结束时间
+							waveCode: $('.pick-head #waveCode').val(), // 拣货拨次单号
+							status: $('.pick-head #pickStatus').val(), // 状态
+							createdBy: $('.pick-head #createdBy').val(), // 创建账号
+							pickBy: $('.pick-head #pickBy').val(), // 认领账号
+							scopeId: $('.pick-head #scopeId').val() // 商城
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							pick.data.pickList = data.datas.content
+							$('#pickList').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'waveCode',
+								title: '拣货拨次单号',
+								width: 120
+							}, {
+								field: 'invoiceCount',
+								title: '发货单数量',
+								width: 100
+							}, {
+                                field: 'createdBy',
+								title: '创建账号',
+								width: 100
+                            }, {
+								field: 'pickBy',
+								title: '认领账号',
+								width: 100
+							}, {
+								field: 'status',
+								title: '拣货状态',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    var html = ''
+                                    if (value == 10) {
+                                        html = `<div class="error-msg">待拣货</div>`
+                                    } else if (value == 20) {
+                                        html = `<div class="success-msg">已完成</div>`
+                                    } else if (value == -10) {
+                                        html = `<div class="gray-msg">已取消</div>`
+                                    }
+									return html
+								}
+							}, {
+								field: 'scopeId',
+								title: '商城',
+                                width: 80,
+                                formatter: function (value, row, index) {
+                                    var html = ''
+                                    if (value == 8) {
+                                        html = `<div>阿噗特賣</div>`
+                                    } else if (value == 18) {
+                                        html = `<div>折多多</div>`
+                                    } else if (value == 17) {
+                                        html = `<div>测试</div>`
+                                    } else {
+										html = `<div>--</div>`
+									}
+									return html
+								}
+							}, {
+								field: 'createdAt',
+								title: '创建时间',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>${timeFormat(value)}</div>`
+									return html
+								}
+							}, {
+								field: 'printed',
+								title: '打印次数',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div>${value == null ? 0 : value}</div>`
+									return html
+								}
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 200,
+								formatter: function (value, row, index) {
+									// <button data-value="PICK_EXPORT" class="btn success hide" onclick="pick.methods.pickExport(${index})">导出</button>
+									// data-value="PICK_EXPORT"
+									// data-value="PICK_DELETE"
+									var html = `<div class="table-btn-group">
+													<button class="btn info" onclick="pick.methods.pickAllDialog(${index})">发货单</button>
+													<button class="btn info" onclick="pick.methods.pickDetailsDialog(${index})">明细</button>
+													<button class="btn success" onclick="pick.methods.printAll(${index})">一键打印</button>
+													<button class="btn error" onclick="pick.methods.deletePick(${index})">删除</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 打印次数
+				printed: function (index) {
+					var waveCode = pick.data.pickList[index].waveCode
+					requestServer('/wave/' + waveCode + '/printed', 'GET').then((response) => {
+						if (response.code == 1) {
+							var columns = $('#pickList').datagrid("options").columns
+							var rows = $('#pickList').datagrid("getRows")
+							rows[index][columns[0][7].field] = response.datas.printed // 静态改变值
+							$('#pickList').datagrid('refreshRow', index)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+				
+				// 查看统计弹框
+				seePickDialog: function () {
+					$('#seePickDialog').dialog('open')
+
+					// 创建时间
+					$('#seePickDialog #createTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('#seePickDialog #createTime').val('')
+
+					// 更新时间
+					$('#seePickDialog #updateTime').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function (ev, picker) {
+						$(this).val('')
+					})
+					$('#seePickDialog #updateTime').val('')
+
+					pick.methods.seePick() // 查看统计
+				},
+
+				// 查看统计
+				seePick: function () {
+					var createTime = $('#seePickDialog #createTime').val()
+					var updateTime = $('#seePickDialog #updateTime').val()
+					showLoading()
+					requestJsonServer('/wave/personalize/info', 'GET', {
+						storehouseId: $('#seePickDialog #storehouseId').val(), // 仓库
+						createBegainTime: timestamp(createTime.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(createTime.substring(19, 35)), // 创建结束时间
+						updatedBegainTime: timestamp(updateTime.substring(0, 16)), // 更新开始时间
+						updatedEndTime: timestamp(updateTime.substring(19, 35)), // 更新结束时间
+						createdBy: $('#seePickDialog #createdBySon').val(), // 创建账号
+						pickBy: $('#seePickDialog #pickBySon').val() // 认领账号
+					}).then((response) => {
+						if (response.code == 1) {
+							var html = `<div>
+											<span>拨次创建账号</span>
+											<span>${response.datas.createBy != null ? response.datas.createBy : '--'}</span>
+										</div>
+										<div>
+											<span>拨次总数</span>
+											<span>${response.datas.waveCount != null ? response.datas.waveCount : '--'}</span>
+										</div>
+										<div>
+											<span>发货单总数</span>
+											<span>${response.datas.waveInvoiceCount != null ? response.datas.waveInvoiceCount : '--'}</span>
+										</div>
+										<div>
+											<span>sku数量</span>
+											<span>${response.datas.waveInvoiceSkuCount != null ? response.datas.waveInvoiceSkuCount : '--'}</span>
+										</div>
+										<div>
+											<span>sku总数</span>
+											<span>${response.datas.waveInvoiceSkuSum != null ? response.datas.waveInvoiceSkuSum : '--'}</span>
+										</div>
+										<div>
+											<span>已拣sku数量</span>
+											<span>${response.datas.waveRInvoiceSkuCount != null ? response.datas.waveRInvoiceSkuCount : '--'}</span>
+										</div>
+										<div>
+											<span>未拣sku总数</span>
+											<span>${response.datas.waveRInvoiceSkuSum != null ? response.datas.waveRInvoiceSkuSum : '--'}</span>
+										</div>
+										<div>
+											<span>拨次认领账号</span>
+											<span>${response.datas.pickBy != null ? response.datas.pickBy : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号认领拨次单总数</span>
+											<span>${response.datas.pickWaveCodeCount != null ? response.datas.pickWaveCodeCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号认领发货单总数</span>
+											<span>${response.datas.pickWaveInvoiceCodeCount != null ? response.datas.pickWaveInvoiceCodeCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号已拣发货单总数</span>
+											<span>${response.datas.rpickInvoiceCount != null ? response.datas.rpickInvoiceCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号未拣发货单总数</span>
+											<span>${response.datas.notRPickInvoiceCount != null ? response.datas.notRPickInvoiceCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号认领sku总数</span>
+											<span>${response.datas.pickInvoiceSkuCount != null ? response.datas.pickInvoiceSkuCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号认领sku数量</span>
+											<span>${response.datas.pickInvoiceSkuSum != null ? response.datas.pickInvoiceSkuSum : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号已拣sku总数</span>
+											<span>${response.datas.rpickInvoiceSkuCount != null ? response.datas.rpickInvoiceSkuCount : '--'}</span>
+										</div>
+										<div>
+											<span>认领账号未拣sku总数</span>
+											<span>${response.datas.notRPickInvoiceSkuCount != null ? response.datas.notRPickInvoiceSkuCount : '--'}</span>
+										</div>`
+							$('#seePick').html(html)
+							$('#seePick').scrollTop(0)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 创建拣货拨次单弹框
+				createPickDialog: function () {
+					$('#createPickDialog').dialog('open')
+					$('#createPickForm').find('input[name="invoiceCount"]').val(10)
+
+					// 仓库
+					$('#createPickForm #storehouseId_').combobox('setValue', pick.data.storehouseId_)
+
+					// 商城
+					$('#createPickForm #scopeId').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '选择商城'
+						}, {
+							id: 8,
+							text: '阿噗特賣'
+						}, {
+							id: 18,
+							text: '折多多'
+						}, {
+							id: 17,
+							text: '测试'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+					$('#createPickForm #scopeId').combobox('setValue', pick.data.scopeId)
+
+					// 物流
+					$('#createPickForm #logisticsType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '全部'
+						}, {
+							id: 1,
+							text: '宅配'
+						}, {
+							id: 2,
+							text: '全家'
+						}, {
+							id: 3,
+							text: '711'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+					$('#createPickForm #logisticsType').combobox('setValue', pick.data.logisticsType)
+
+					// 发货单类型
+					$('#createPickForm #invoiceType').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '全部'
+						}, {
+							id: 1,
+							text: '特货'
+						}, {
+							id: 2,
+							text: '普货'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+					$('#createPickForm #invoiceType').combobox('setValue', pick.data.invoiceType)
+				},
+
+				// 创建拣货拨次单
+				createPick: function () {
+					var parame = getParams('#createPickForm')
+					if (!parame.invoiceCount) {
+						message('error', '发货单数量不能为空')
+						return false
+					}
+					if (!parame.storehouseId) {
+						message('error', '请选择仓库')
+						return false
+					}
+					if (!parame.scopeId) {
+						message('error', '请选择商城')
+						return false
+					}
+					if (!parame.logisticsType) {
+						message('error', '请选择物流')
+						return false
+					}
+					if (!parame.invoiceType) {
+						message('error', '请选择发货单类型')
+						return false
+					}
+					showLoading()
+					requestJsonServer('/wave/generate', 'GET', parame).then((response) => {
+						if (response.code == 1) {
+							if (response.datas.messages == '创建成功') {
+								message('success', response.datas.messages)
+								$('#createPickForm').form('clear')
+								$('#createPickDialog').dialog('close')
+								$('#pickList').datagrid("reload") // 获取拣货拨次单列表
+							} else {
+								message('error', response.datas.messages)
+							}
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+						pick.data.storehouseId_ = parame.storehouseId // 缓存选中
+						pick.data.scopeId = parame.scopeId
+						pick.data.logisticsType = parame.logisticsType
+						pick.data.invoiceType = parame.invoiceType
+						hideLoading()
+					}).catch((error) => {
+						hideLoading()
+					})
+				},
+
+				// 导出拣货拨次单（头部）
+				pickAllExport: function () {
+					var time = $('.pick-head #timeFrame').val()
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/wave/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'storehouseId'}).val($('.pick-head #storehouseId').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.append($("<input type='hidden'>").attr({'name': 'createBegainTime'}).val(timestamp(time.substring(0, 16))))
+					form.append($("<input type='hidden'>").attr({'name': 'createEndTime'}).val(timestamp(time.substring(19, 35))))
+					form.append($("<input type='hidden'>").attr({'name': 'waveCode'}).val($('.pick-head #waveCode').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'status'}).val($('.pick-head #pickStatus').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'createdBy'}).val($('.pick-head #createdBy').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'pickBy'}).val($('.pick-head #pickBy').val()))
+					form.append($("<input type='hidden'>").attr({'name': 'scopeId'}).val($('.pick-head #scopeId').val()))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 查看所有发货单
+				pickAllDialog: function (index) {
+					var obj = pick.data.pickList[index]
+					var storehouseId = pick.data.pickList[index].storehouseId
+					var waveCode = pick.data.pickList[index].waveCode
+					pick.data.storehouseId = storehouseId
+					pick.data.waveCode = waveCode
+					$('#pickAllDialog').dialog('open')
+					$('#pickAllList').datagrid({
+						method: 'GET',
+						url: host() + '/wave/' + waveCode + '/' + storehouseId + '/invoice',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							pick.data.pickAllList = data.datas
+							return {
+								rows: data.datas
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'invoiceCode',
+								title: '发货单号',
+								width: 100
+							}, {
+								field: 'pickCode',
+								title: '物流单号',
+								width: 100
+							}, {
+								field: 'status',
+								title: '发货单拣货状态',
+                                width: 100,
+                                formatter: function (value, row, index) {
+                                    var html = ''
+                                    if (value == 20) {
+                                        html = `<div class="error-msg">发货单拣货中</div>`
+                                    } else if (value == 30) {
+                                        html = `<div class="error-msg">发货单待配货</div>`
+                                    } else if (value == 40) {
+                                        html = `<div class="error-msg">发货单待复核</div>`
+                                    } else if (value == 50) {
+                                        html = `<div class="success-msg">发货单完成</div>`
+                                    } else if (value == 110) {
+										html = `<div class="success-msg">配货完成</div>`
+									} else if (value == 120) {
+										html = `<div class="error-msg">缺货</div>`
+									} else if (value == -10) {
+                                        html = `<div class="gray-msg">发货单取消</div>`
+                                    }
+									return html
+								}
+							}, {
+								field: 'containerCode',
+								title: '拣货筐',
+								width: 100
+							}, {
+								field: 'index',
+								title: '操作',
+								width: 100,
+								formatter: function (value, row, index) {
+									var html = `<div class="table-btn-group">
+													<button class="btn info" onclick="pick.methods.invoiceDetailsDialog(${index})">明细</button>
+												</div>`
+									return html
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+
+						}
+					})
+				},
+
+                // 拣货拨次单明细列表
+                pickDetailsDialog: function (index) {
+                    var obj = pick.data.pickList[index]
+					$('#pickDetailsList').datagrid({
+						method: 'GET',
+						url: host() + '/wave/' + obj.waveCode + '/' + obj.storehouseId + '/details',
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							pick.data.pickDetailsList = data.datas
+							var total = 0 // 总数
+							var selected = 0 // 已拣
+							var notSelected = 0 // 未拣
+							for (const i in data.datas) {
+								total += data.datas[i].quantity
+								selected += data.datas[i].pickQuantity
+								notSelected += (data.datas[i].quantity - data.datas[i].pickQuantity)
+							}
+							$('#pickDetailsDialog').dialog({title: `拣货拨次单明细&nbsp;&nbsp;&nbsp;&nbsp;sku个数：${data.datas.length}&nbsp;&nbsp;&nbsp;&nbsp;总数：${total}&nbsp;&nbsp;&nbsp;&nbsp;已拣：${selected}&nbsp;&nbsp;&nbsp;&nbsp;未拣：${notSelected}`})
+							$('#pickDetailsDialog').dialog('open')
+							$('#pickDetailsList').datagrid('scrollTo', 0) // 滚动条置顶
+							return {
+								rows: data.datas
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="pick.methods.bigImg(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100
+							}, {
+								field: 'quantity',
+								title: '应拣数量',
+								width: 100
+							}, {
+								field: 'pickQuantity',
+								title: '已拣数量',
+								width: 100
+							}, {
+								field: 'shelf',
+								title: '库位',
+								width: 100
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+                },
+
+				// 发货单明细列表
+				invoiceDetailsDialog: function (index) {
+					var obj = pick.data.pickAllList[index]
+					$('#invoiceDetailsDialog').dialog('open')
+					$('#invoiceDetailsList').datagrid({
+						method: 'GET',
+						url: host() + '/invoice/' + obj.invoiceCode + '/' + obj.storehouseId,
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						queryParams: {
+							// 其他参数
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									rows: []
+								}
+							}
+							pick.data.invoiceDetailsList = data.datas[0].invoiceDetails
+							return {
+								rows: data.datas[0].invoiceDetails
+							}
+						},
+						fitColumns: true, // 自适应宽度
+						columns: [
+							[{
+								field: 'productSkuImage',
+								title: '商品图片',
+								formatter: function (value, row, index) {
+									var html = `<div class="table-colums-group">
+													<img class="table-colums-img" onclick="pick.methods.bigImg1(${index})" src="${row.productSkuImage}" />
+												</div>`
+									return html
+								}
+							}, {
+								field: 'productTitle',
+								title: '商品名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'productSkuName',
+								title: '规格名称',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'productSkuBarcode',
+								title: '条形码',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}, {
+								field: 'quantity',
+								title: '数量',
+								width: 50,
+								formatter: function (value, row, index) {
+									return `<div>${value}</div>`
+								}
+							}]
+						],
+						onLoadSuccess: function (param) {
+							permissionButton() // 权限按钮
+						}
+					})
+				},
+
+				// 一键打印
+				printAll: function (index) {
+					var storehouseId = pick.data.pickList[index].storehouseId
+					var waveCode = pick.data.pickList[index].waveCode
+					requestServer('/wave/' + waveCode + '/' + storehouseId + '/invoice/print', 'GET').then((response) => {
+						if (response.code == 1) {
+                            printAll(waveCode, response.datas)
+							pick.methods.printed(index) // 打印次数
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+				},
+
+                // 打印拣货拨次单
+                printPick: function () {
+                    var waveCode = pick.data.waveCode // 当前要打印的拣货拨次单号
+                    printWaveTag(waveCode)
+                },
+
+                // 打印面单
+                printFaceSheet: function () {
+					var storehouseId = pick.data.storehouseId
+                    var waveCode = pick.data.waveCode
+                    requestServer('/wave/' + waveCode + '/' + storehouseId + '/invoice/print', 'GET').then((response) => {
+						if (response.code == 1) {
+                            printFaceSheetTagList(response.datas)
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+                },
+
+				// 导出
+				pickExport: function (index) {
+					var waveCode = pick.data.pickList[index].waveCode
+					var form = $("<form method='get'></form>")
+					form.attr({'action': host() + '/wave/' + waveCode + '/details/export'})
+					form.append($("<input type='hidden'>").attr({'name': 'username'}).val(localStorage.getItem('userName')))
+					form.appendTo($('body')).submit().remove()
+				},
+
+				// 删除拣货拨次单
+				deletePick: function (index) {
+					var storehouseId = pick.data.pickList[index].storehouseId
+					var waveCode = pick.data.pickList[index].waveCode
+					$.messager.confirm('确认', '您确认想要删除吗？', function (r) {
+						if (r) {
+							showLoading()
+							requestServer('/wave/' + waveCode + '/' + storehouseId, 'DELETE', {}).then((response) => {
+								if (response.code == 1) {
+									message('success', '删除成功')
+									$('#pickList').datagrid("reload") // 获取拣货拨次单列表
+								} else if (response.code == -1 || response.code == -3) {
+									loginOut()
+								} else {
+									message('error', response.message)
+								}
+								hideLoading()
+							}).catch((error) => {
+								hideLoading()
+							})
+						}
+					})
+				},
+
+                // 查看大图（拨次拣货单明细）
+				bigImg: function (index, indexs) {
+					var obj = pick.data.pickDetailsList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#pickImg').attr('src', obj.productSkuImage)
+					$('#pickImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				},
+
+				// 查看大图（发货单明细）
+				bigImg1: function (index) {
+					var obj = pick.data.invoiceDetailsList[index]
+					var html = `<div class="big-img-details">
+									<div>${obj.productSkuBarcode}</div>
+									<div>${obj.productTitle}</div>
+									<div>${obj.productSkuName}</div>
+								</div>`
+					$('#pickImg').attr('src', obj.productSkuImage)
+					$('#pickImgDialog').dialog('open')
+					$('.big-img-right').html(html)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				pick.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			pick.init()
+		})
+	</script>
+</body>
+
+</html>

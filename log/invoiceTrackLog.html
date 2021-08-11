@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+	<meta charset="utf-8">
+	<title>发货单跟踪</title>
+</head>
+
+<body>
+
+	<div class="easyui-tabs invoicetracklog-head" style="width: 100%;height: calc(100% - 20px);margin: 10px auto;">
+		<div title="统计" style="padding: 10px;">
+			<div class="tab-head-one">
+				<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+				<input id="invoiceTrackTime" class="form-date" placeholder="发货单创建时间">
+                <input id="invoiceTrackStatus" class="easyui-combobox" prompt="发货单状态">
+				<button class="btn-34 info" onclick="invoiceTrackLog.methods.searchInvoicetrackLogEchart()"><i class="fa fa-search"></i></button>
+			</div>
+			<div class="panel-block" id='newInvoiceBar' style='padding:0;'>
+				<div id="persert_0" class="easyui-progressbar" data-options="value:0" style="width:100%;height:50px;margin-top:30px;"></div>
+				<div id="persert_1" class="easyui-progressbar" data-options="value:0" style="width:100%;height:50px;margin-top:30px;"></div>
+				<div id="persert_2" class="easyui-progressbar" data-options="value:0" style="width:100%;height:50px;margin-top:30px;"></div>
+				<div id="persert_3" class="easyui-progressbar" data-options="value:0" style="width:100%;height:50px;margin-top:30px;"></div>
+				<div id="persert_4" class="easyui-progressbar" data-options="value:0" style="width:100%;height:50px;margin-top:30px;"></div>
+			</div>
+		</div>
+		<div title="跟踪明细" style="padding:10px;">
+			<div class="tab-head-two">
+				<input id="storehouseId" class="easyui-combobox" prompt="仓库">
+				<input id="invoiceTrackTime1" class="form-date" placeholder="选择时间">
+				<input id="invoiceAllTime" class="easyui-combobox" prompt="时间段">
+				<input id="invoiceTrackStatus1" class="easyui-combobox" prompt="发货单状态">
+				<input id="invoiceTrackCode" class="easyui-textbox" prompt="发货单号">
+				<input id="invoiceTrackLiuCode" class="easyui-textbox" prompt="物流单号">
+				<button class="btn-34 info" onclick="invoiceTrackLog.methods.searchInvoicetrackLogList()"><i class="fa fa-search"></i></button>
+			</div>
+			<div id='recriptLogList' style="width:100%;margin-top:10px;">
+				<table id="invoiceTrackTable" style='width:100%;'></table> 
+			</div>
+		</div>
+	</div>
+
+	<script type="text/javascript">
+		var editIndex = undefined
+		var invoiceTrackLog = {
+			data: {
+				receiptLogList: [] // 发货跟踪列表
+			},
+			methods: {
+				// 初始化条件查询
+				initSearch: function () {
+					// 仓库
+					requestJsonServer('/storehouse/bymanager', 'GET', {}).then((response) => {
+						if (response.code == 1) {
+							response.datas.unshift({id: '',storehouseName: '选择仓库'})
+							$('.invoicetracklog-head .tab-head-one #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+							$('.invoicetracklog-head .tab-head-two #storehouseId').combobox({
+								editable: false, // 禁止输入
+								valueField: 'id',
+								textField: 'storehouseName',
+								data: response.datas,
+								onSelect: function (rec) {
+
+								}
+							})
+						} else if (response.code == -1 || response.code == -3) {
+							loginOut()
+						} else {
+							message('error', response.message)
+						}
+					}).catch((error) => {
+						console.log(error)
+					})
+
+					// 发货单创建时间
+					$('#invoiceTrackTime, #invoiceTrackTime1').daterangepicker(
+						timeControl(moment().subtract(1, 'days').hours(0).minutes(0).second(0), moment().add(1, 'days').hours(0).minutes(0).second(0))
+					).on('cancel.daterangepicker', function(ev, picker) {
+						$(this).val('')
+					}).on('showCalendar.daterangepicker', function(ev, picker) {
+						
+					})
+					// $('#invoiceTrackTime,#invoiceTrackTime1').val('') // 清空发货单创建时间信息
+
+					// 发货单状态
+					$('#invoiceTrackStatus, #invoiceTrackStatus1').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: '',
+							text: '发货单状态'
+						}, {
+							id: 10,
+							text: '已创建'
+						}, {
+							id: 20,
+							text: '拣货中'
+						}, {
+							id: 30,
+							text: '待配货'
+						}, {
+							id: 40,
+							text: '待复核'
+						}, {
+							id: 60,
+							text: '待出库'
+						}, {
+							id: 70,
+							text: '已出库'
+						}, {
+							id: 120,
+							text: '缺货'
+						}, {
+							id: -10,
+							text: '发货作废'
+						}],
+						onSelect: function (rec) {
+							
+						}
+					})
+
+					// 时间段
+					$('#invoiceAllTime').combobox({
+						editable: false, // 禁止输入
+						valueField: 'id',
+						textField: 'text',
+						data: [{
+							id: -1,
+							text: '时间段',
+							selected: true
+						}, {
+							id: 0,
+							text: '小于24h'
+						}, {
+							id: 1,
+							text: '24h~36h'
+						}, {
+							id: 2,
+							text: '36h~48h'
+						}, {
+							id: 3,
+							text: '48h~72h'
+						}, {
+							id: 4,
+							text: '大于72h'
+						}],
+						onSelect: function (rec) {
+
+						}
+					})
+
+					invoiceTrackLog.methods.searchInvoicetrackLogEchart() // 发货单统计图表
+					invoiceTrackLog.methods.searchInvoicetrackLogList()  // 发货单明细列表
+				},
+
+				// 发货单统计图表
+				searchInvoicetrackLogEchart: function () {
+					var invoiceTime =  $('.tab-head-one #invoiceTrackTime').val()
+					// 判断必填发货单创建时间
+					if(invoiceTime == ''){
+						$.messager.alert('提醒', '请选择发货单创建时间');  
+						return false
+					}
+					showLoading()
+					// 请求数据接口返回数据
+					requestJsonServer('/report/invoice/time/count', 'get', {
+						storehouseId: $('.invoicetracklog-head .tab-head-one #storehouseId').val(), // 仓库
+						createBegainTime: timestamp(invoiceTime.substring(0, 16)), // 创建开始时间
+						createEndTime: timestamp(invoiceTime.substring(19, 35)), // 创建结束时间
+						waveStatus: $('.tab-head-one #invoiceTrackStatus').val()
+					}).then(res => {
+						hideLoading()
+						// 查看返回数据展示 相应的百分比
+						if (res.datas.length <= 0) {
+							message('error', '未查到数据')
+							// 进度条赋值
+							const timArrayTime = ['大于72小时（包括72小时）','48h~72h（包括48小时）','36h~48h（包括36小时）','24h~36h（包括24小时）','小于24h']
+							for (var i = 0; i < 5; i++) {
+								// +  '当前占比0%'
+								$('#persert_' + i).progressbar({
+									value: 0,
+									text: timArrayTime[i] + ',共<span style="color:#f50;">0</span>单'
+								});
+							}
+							return false  
+						}
+						// 进度条赋值
+						for (var i = 0; i < res.datas.length; i++) {
+							// 展示发货单跟踪百分比   +  '当前占比' + res.datas[i].percent 
+							$('#persert_' + i).progressbar({
+								value: res.datas[i].percent.replace(/\%/g,""),
+								text: res.datas[i].time + ',共<span style="color:#f50;">' + res.datas[i].invoiceCount + '</span>单'
+							});
+						}
+					}).catch(error => {
+
+					})
+				},
+
+				// 发货单明细列表
+				searchInvoicetrackLogList: function(){
+					var invoiceTime = $('.tab-head-two #invoiceTrackTime1').val() // 获取明细创建时间
+					$('#invoiceTrackTable').height($(window).height() - $('.invoicetracklog-head .tab-head-two').height() - 210)
+					// 判断必填发货单创建时间
+					if(invoiceTime == ''){
+						$.messager.alert('提醒', '请选择时间');  
+						return false
+					}
+					// 计算时间段
+					var  invoiceStartTime = '',invoiceEndTime =''
+					if ($('#invoiceAllTime').val() == -1) {
+						// 全部时间段的参数
+						invoiceStartTime = ''
+						invoiceEndTime = ''
+					} else if ($('#invoiceAllTime').val() == 0) {
+						// 小于24h的参数
+						invoiceStartTime = 0
+						invoiceEndTime = 24*60*60
+					} else if ($('#invoiceAllTime').val() == 1) {
+						// 24-36h
+						invoiceStartTime = 24*60*60
+						invoiceEndTime = 36*60*60
+					} else if ($('#invoiceAllTime').val() == 2) {
+						// 36-48h
+						invoiceStartTime = 36*60*60
+						invoiceEndTime = 48*60*60
+					} else if ($('#invoiceAllTime').val() == 3) {
+						// 48-72h
+						invoiceStartTime = 48*60*60
+						invoiceEndTime = 72*60*60
+					} else if ($('#invoiceAllTime').val() == 4) {
+						// 大于 72h
+						invoiceStartTime = 72*60*60
+						invoiceEndTime = ''
+					}
+					$('#invoiceTrackTable').datagrid({
+						method: 'GET',
+						url: host() + '/report/invoice/time/list', // 收货统计明细
+						idField: 'id',
+						fit: false,
+						loadMsg: '正在加载，请稍等...',
+						singleSelect: true, // 如果为true，则只允许选择一行
+						striped: true, // 斑马线效果
+						nowrap: false, // 自动换行
+						pageNumber: 1,
+						pageSize: 30,
+						pageList: [30, 50, 100, 300],
+						queryParams: {
+							// 其他参数
+							storehouseId: $('.invoicetracklog-head .tab-head-two #storehouseId').val(), // 仓库
+							createBegainTime: timestamp(invoiceTime.substring(0, 16)), // 创建开始时间
+							createEndTime: timestamp(invoiceTime.substring(19, 35)), // 创建结束时间
+							startTimes: invoiceStartTime,  // 时间段开始时长
+							endTimes: invoiceEndTime , // 时间段结束时长
+							waveStatus : $('#invoiceTrackStatus1').val(), // 状态参数
+							invoiceCode: $('#invoiceTrackCode').val(),  // 发货单号
+							logisticCode: $('#invoiceTrackLiuCode').val() // 物流单号
+						},
+						loadFilter: function (data) {
+							if (data.code == -1 || data.code == -3) {
+								loginOut()
+							} else if (data.code == -2) {
+								message('error', data.message)
+								return {
+									total: 0,
+									rows: []
+								}
+							}
+							invoiceTrackLog.data.receiptLogList = data.datas.content
+							$('#invoiceTrackTable').datagrid('scrollTo', 0)
+							return {
+								total: data.datas.totalElements,
+								rows: data.datas.content
+							}
+						},
+						pagination: true, // 分页
+						fitColumns: false, // 自适应宽度
+						columns: [
+							[{
+								field: 'invoice_code',
+								title: '发货单号',
+								width:200,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'created_at',
+								title: '创建时间',
+								width: 200,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value ? timeFormat(value) : '--')}</div>`
+								}
+							}, {
+								field: 'updated_at',
+								title: '更新时间',
+								width: 200,
+								formatter: function (value, row, index) {
+									return `<div>${timeFormat(value ? timeFormat(value) : '--')}</div>`
+								}
+							}, {
+								field: 'status',
+								title: '发货单状态',
+								width:100,
+								formatter: function (value, row, index) {
+									var htmlInvoice = ''
+									if (value == 10) {
+										htmlInvoice = `<div class="success-msg">已创建</div>`
+									} else if (value == 20) {
+										htmlInvoice = `<div class="error-msg">拣货中</div>`
+									} else if (value == 30) {
+										htmlInvoice = `<div class="error-msg">待配货</div>`
+									} else if (value == 40) {
+										htmlInvoice = `<div class="error-msg">待复核</div>`
+									} else if (value == 60) {
+										htmlInvoice = `<div class="error-msg">待出库</div>`
+									} else if (value == 70) {
+										htmlInvoice = `<div class="error-msg">已出库</div>`
+									}else if (value == 120) {
+										htmlInvoice = `<div class="error-msg">缺货</div>`
+									} else if (value == -10) {
+										htmlInvoice = `<div class="error-msg">发货作废</div>`
+									}
+									return htmlInvoice
+								}
+							}, {
+								field: 'yn',
+								title: '状态变更周期',
+								width: 250,
+								formatter: function (value, row, index) {
+									let showTimeLong = timestamp(row.updated_at) - timestamp(row.created_at)
+									var upHtmlInvoice = '',upHtmlOnly = ''
+									// if(Math.ceil(showTimeLong/(60*60)) < 24) {
+									// 	return '小于24h'
+									// }else if(Math.ceil(showTimeLong/(60*60)) > 24 && Math.ceil(showTimeLong/(60*60)) < 36){
+									// 	return '24~36h'
+									// }else if(Math.ceil(showTimeLong/(60*60)) > 36 && Math.ceil(showTimeLong/(60*60))< 48){
+									// 	return '36~48h'
+									// }else if(Math.ceil(showTimeLong/(60*60)) > 48 && Math.ceil(showTimeLong/(60*60)) < 72){
+									// 	return '48~72h'
+									// }else {
+									// 	return '大于72h'
+									// }
+									if (row.status == 10) {
+										upHtmlInvoice = `<span class="success-msg">已创建</span>`
+									} else if (row.status == 20) {
+										upHtmlInvoice = `<span class="error-msg">拣货中</span>`
+									} else if (row.status == 30) {
+										upHtmlInvoice = `<span class="error-msg">待配货</span>`
+									} else if (row.status == 40) {
+										upHtmlInvoice = `<span class="error-msg">待复核</span>`
+									} else if (row.status == 60) {
+										upHtmlInvoice = `<span class="error-msg">待出库</span>`
+									} else if (row.status == 70) {
+										upHtmlInvoice = `<span class="error-msg">已出库</span>`
+									} else if (row.status == 120) {
+										upHtmlInvoice = `<span class="error-msg">缺货</span>`
+									} else if (row.status == -10) {
+										upHtmlInvoice = `<span class="error-msg">发货作废</span>`
+									}
+
+									if( Math.ceil(showTimeLong / (60 * 60)) > 72 ){
+										upHtmlOnly = 'error-msg'
+									}else {
+										upHtmlOnly  = ''
+									}
+									return '从入库到'+ upHtmlInvoice + '用时' + '<span class="' + upHtmlOnly + '">' +Math.ceil(showTimeLong/(60*60)) + 'h</span>'
+								}
+							},{
+								field: 'waitTime',
+								title: '停留时长',
+								width:100,
+								formatter: function (value, row, index) {
+									if(value == null || value == 'null'){
+										return `<div>--</div>`
+									}else if(value <= 72){
+										return `<div>${value}h</div>`
+									}else{
+										return `<div class='error-msg'>${value}h</div>`
+									}
+								}
+							}, {
+								field: 'resource',
+								title: '异常原因（双击可编辑）',
+								width: 400,
+								editor:'text',
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'pick_code',
+								title: '物流单号',
+								width: 200,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'consignee',
+								title: '收货人',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'tel',
+								title: '电话',
+								width: 100,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}, {
+								field: 'detail',
+								title: '详细地址',
+								width: 300,
+								formatter: function (value, row, index) {
+									return `<div>${row.city} ${row.district} ${row.detail}</div>`
+								}
+							}, {
+								field: 'invoice_price',
+								title: '价格',
+								width: 40,
+								formatter: function (value, row, index) {
+									return `<div>${value != null ? value : '--'}</div>`
+								}
+							}]
+						],
+						onDblClickCell: function(index,field,value){
+							if (editIndex == undefined) {
+								if(field == "resource"){
+									$(this).datagrid('beginEdit', index);
+									var that = $(this)
+									var ed = $(this).datagrid('getEditor', {index:index,field:field});
+									$(ed.target).focus();
+									$(ed.target).bind('blur',function(e){
+										that.datagrid('endEdit',index);  
+										editIndex = undefined;
+									})
+								}
+							} else if (editIndex != undefined){ // 如果不相等，说明已经打开编辑器了，需要关闭编辑器
+								$(this).datagrid('endEdit', editIndex);  
+								editIndex = undefined;
+							}
+						},
+						onAfterEdit:function(index, row, changes){ // 关闭编辑器后触发
+							var updated = $(this).datagrid('getChanges', 'updated');  // updated 是一个getChanges的属性，可以查看api
+							if (updated.length < 1) {  // 如果编辑器中的数据已经修改，则length为1，否则为0，判断是否已经修改数据
+								editRow = undefined;  
+								$(this).datagrid('unselectAll');  
+								return;  
+							} else {  
+								// 请求数据接口返回数据
+								requestJsonServer('/report/invoice/update/resource', 'get', {
+									invoiceCode :  row.invoice_code,
+									resource: changes.resource
+								}).then(res => {
+									message('success', '添加成功')
+								}).catch(error => {
+
+								})	
+							}
+						},
+						onLoadSuccess: function (param) {
+
+						}
+					})
+					$('#invoiceTrackTable').datagrid('scrollTo', 0)
+				}
+			},
+			events: {
+
+			},
+			init: function () {
+				checkLogin() // 判断当前是否登录
+				invoiceTrackLog.methods.initSearch() // 初始化条件查询
+			}
+		}
+
+		// 初始化
+		$(function () {
+			invoiceTrackLog.init()
+		})
+	</script>
+</body>
+
+</html>
